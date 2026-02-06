@@ -5,6 +5,7 @@ import StatsPanel from './components/StatsPanel';
 import NetworkVisualization, { NetworkView } from './components/NetworkVisualization';
 import EnrichmentPanel from './components/EnrichmentPanel';
 import PathwaySelector from './components/PathwaySelector';
+import Landing from './components/Landing';
 import { analyzeNetwork } from './services/geminiService';
 import { loadIntegratedData } from './services/dataLoader';
 import { PathwayData } from './services/pathwayLoader';
@@ -27,7 +28,7 @@ const App: React.FC = () => {
   const [geneMapping, setGeneMapping] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(true);
-  const [loadingMsg, setLoadingMsg] = useState("Initializing GeneReg Integrator...");
+  const [loadingMsg, setLoadingMsg] = useState("Initializing PRINT...");
 
   const [activeView, setActiveView] = useState<AppView>('explorer');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -46,6 +47,7 @@ const App: React.FC = () => {
   const [pathwayData, setPathwayData] = useState<PathwayData | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [networkView, setNetworkView] = useState<NetworkView>('direct');
+  const [showLanding, setShowLanding] = useState(true);
 
   const PRIORITY_GO_TERMS = [
     { id: 'all', label: 'Todos los Procesos' },
@@ -181,9 +183,21 @@ const App: React.FC = () => {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
         <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-        <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Plant Regulatory Network Tool</h2>
+        <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">PRINT</h2>
         <p className="text-slate-400 mt-2 animate-pulse">{loadingMsg}</p>
       </div>
+    );
+  }
+
+  if (showLanding) {
+    return (
+      <Landing
+        data={data}
+        onEnter={() => {
+          setShowLanding(false);
+          setActiveView('explorer');
+        }}
+      />
     );
   }
 
@@ -194,11 +208,12 @@ const App: React.FC = () => {
       <aside className={`fixed md:static z-30 w-72 h-full bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 text-slate-300 flex flex-col shrink-0 shadow-2xl transition-transform md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-slate-800 flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30">
-              🌱
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30 border border-slate-700">
+              <img src="/logos/prnt-mark.svg" alt="PRINT logo" className="w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight leading-tight">Plant Regulatory<br />Network Tool</h1>
+              <h1 className="text-lg font-bold text-white tracking-tight leading-tight">PRINT</h1>
+              <p className="text-[10px] text-slate-400 -mt-0.5">Plant Regulatory Information Network Tool</p>
             </div>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">✕</button>
@@ -243,6 +258,20 @@ const App: React.FC = () => {
             </div>
           )}
         </nav>
+        <div className="p-4 border-t border-slate-800">
+          <div className="bg-slate-700/60 border border-slate-600 rounded-2xl px-4 py-3 flex items-center justify-center gap-6 shadow-lg shadow-slate-950/30">
+            <img
+              src="/logos/Logo Lab (transparent bg).png"
+              alt="Logo Lab"
+              className="h-16 w-auto opacity-90"
+            />
+            <img
+              src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
+              alt="PhytoLearning"
+              className="h-36 w-auto opacity-95"
+            />
+          </div>
+        </div>
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 bg-slate-950/30">
@@ -396,6 +425,10 @@ const App: React.FC = () => {
             </div>
           )
           }
+          <div className="mt-10 pt-6 border-t border-slate-800 text-center text-[11px] text-slate-500 max-w-4xl mx-auto">
+            This data integration was done with ConnecTF (M.D. Brooks, 2021). Developed by Gabriela
+            Vásquez, Luciano Ahumada and Nicolás Müller. (Plant Genome Regulation Lab, UNAB).
+          </div>
         </div>
       </main>
     </div>
