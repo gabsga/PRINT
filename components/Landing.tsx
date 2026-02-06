@@ -1,8 +1,5 @@
 import React, { useMemo } from 'react';
-import { IntegratedInteraction } from '../types';
-
 type LandingProps = {
-  data: IntegratedInteraction[];
   onEnter: () => void;
 };
 
@@ -12,14 +9,15 @@ const SOURCE_COLORS: Record<string, string> = {
   CHIP: '#22d3ee'
 };
 
-export default function Landing({ data, onEnter }: LandingProps) {
-  const sampleRows = useMemo(() => {
-    return [
+export default function Landing({ onEnter }: LandingProps) {
+  const sampleRows = useMemo(
+    () => [
       { tf: 'MYBR1', target: 'AUX1', sources: ['DAP', 'CHIP'] },
       { tf: 'HB6', target: 'AUX1', sources: ['DAP', 'CHIP'] },
       { tf: 'MYBR1', target: 'GH9C2', sources: ['DAP', 'CHIP'] }
-    ];
-  }, []);
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-200">

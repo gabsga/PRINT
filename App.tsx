@@ -81,6 +81,11 @@ const App: React.FC = () => {
     init();
   }, []);
 
+  useEffect(() => {
+    const seen = window.localStorage.getItem('print_landing_seen');
+    if (seen === '1') setShowLanding(false);
+  }, []);
+
   const allPathways = useMemo(() => {
     const pSet = new Set<string>();
     (Object.values(pathwayMapping) as string[][]).forEach(p => p.forEach(v => pSet.add(v)));
@@ -192,10 +197,10 @@ const App: React.FC = () => {
   if (showLanding) {
     return (
       <Landing
-        data={data}
         onEnter={() => {
           setShowLanding(false);
           setActiveView('explorer');
+          window.localStorage.setItem('print_landing_seen', '1');
         }}
       />
     );
