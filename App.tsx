@@ -2,12 +2,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { IntegratedInteraction, AnalysisResult, AppView, PathwayMapping, HubMapping } from './types';
 import StatsPanel from './components/StatsPanel';
-import NetworkVisualization from './components/NetworkVisualization';
+import NetworkVisualization, { NetworkView } from './components/NetworkVisualization';
 import EnrichmentPanel from './components/EnrichmentPanel';
 import PathwaySelector from './components/PathwaySelector';
 import { analyzeNetwork } from './services/geminiService';
 import { loadIntegratedData } from './services/dataLoader';
 import { PathwayData } from './services/pathwayLoader';
+
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
 
 const App: React.FC = () => {
   const [data, setData] = useState<IntegratedInteraction[]>([]);
@@ -19,10 +29,11 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMsg, setLoadingMsg] = useState("Initializing GeneReg Integrator...");
 
-  const [activeView, setActiveView] = useState<AppView>('landing');
+  const [activeView, setActiveView] = useState<AppView>('explorer');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AnalysisResult | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 350);
   const [minConfidence, setMinConfidence] = useState(1);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedPathway, setSelectedPathway] = useState<string>('all');
@@ -33,6 +44,8 @@ const App: React.FC = () => {
   const [selectedSources, setSelectedSources] = useState<string[]>(['TARGET', 'DAP', 'CHIP']);
   const [graphScope, setGraphScope] = useState<'global' | 'direct' | 'cascade'>('global');
   const [pathwayData, setPathwayData] = useState<PathwayData | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [networkView, setNetworkView] = useState<NetworkView>('direct');
 
   const PRIORITY_GO_TERMS = [
     { id: 'all', label: 'Todos los Procesos' },
@@ -74,7 +87,7 @@ const App: React.FC = () => {
 
   const filteredData = useMemo(() => {
     let output = data.filter(i => {
-      const matchesSearch = i.tf.toUpperCase().includes(searchTerm.toUpperCase()) || i.target.toUpperCase().includes(searchTerm.toUpperCase());
+      const matchesSearch = i.tf.toUpperCase().includes(debouncedSearchTerm.toUpperCase()) || i.target.toUpperCase().includes(debouncedSearchTerm.toUpperCase());
       const matchesConfidence = i.evidenceCount >= minConfidence;
 
       let matchesPathway = true;
@@ -107,7 +120,7 @@ const App: React.FC = () => {
       }
     } else {
       // Direct or Cascade requires a "Center"
-      const center = priorityTfFilter || (output.some(i => i.tf.toUpperCase() === searchTerm.toUpperCase()) ? searchTerm.toUpperCase() : null);
+      const center = priorityTfFilter || (output.some(i => i.tf.toUpperCase() === debouncedSearchTerm.toUpperCase()) ? debouncedSearchTerm.toUpperCase() : null);
 
       if (center) {
         if (graphScope === 'direct') {
@@ -124,7 +137,7 @@ const App: React.FC = () => {
     }
 
     return output;
-  }, [data, searchTerm, minConfidence, selectedPathway, pathwayMapping, selectedGoTerm, goAnnotations, priorityTfFilter, selectedSources, graphScope]);
+  }, [data, debouncedSearchTerm, minConfidence, selectedPathway, pathwayMapping, selectedGoTerm, goAnnotations, priorityTfFilter, selectedSources, graphScope]);
 
   const handleDownloadTSV = () => {
     const headers = ['TF', 'Target', 'Evidence_Sources', 'Direction', 'Evidence_Count', 'Processes'];
@@ -176,20 +189,20 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
-      <aside className="w-72 bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 text-slate-300 flex flex-col shrink-0 shadow-2xl">
-        <button
-          onClick={() => setActiveView('landing')}
-          className="p-6 border-b border-slate-800 flex items-center gap-3 text-left hover:bg-slate-800/40 transition-colors"
-          title="Back to Landing"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-slate-900/70 border border-slate-800 flex items-center justify-center shadow-lg">
-            <img src="/app-logo.svg" alt="Plant Regulatory Network Tool" className="w-12 h-12" />
+      {/* Mobile overlay */}
+      <div className={`fixed inset-0 bg-slate-950/70 z-20 transition-opacity md:hidden ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)}></div>
+      <aside className={`fixed md:static z-30 w-72 h-full bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 text-slate-300 flex flex-col shrink-0 shadow-2xl transition-transform md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 border-b border-slate-800 flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30">
+              🌱
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white tracking-tight leading-tight">Plant Regulatory<br />Network Tool</h1>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-white tracking-tight leading-tight">Plant Regulatory<br />Network Tool</h1>
-            <div className="text-[10px] uppercase tracking-widest text-slate-400">Open Landing</div>
-          </div>
-        </button>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">✕</button>
+        </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
           <div className="mb-6 px-3 py-3 bg-slate-800/50 rounded-xl border border-slate-700">
@@ -216,40 +229,26 @@ const App: React.FC = () => {
             </svg>
             Network View
           </button>
+
           <button onClick={() => setActiveView('enrichment')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeView === 'enrichment' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-slate-800 text-slate-400'}`}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h10M4 18h10" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3v18h18M7 13l3-3 4 4 5-6" />
             </svg>
             Enrichment
           </button>
 
-          <div className="pt-6 border-t border-slate-800 mt-4">
-            <PathwaySelector onPathwayChange={setPathwayData} />
-          </div>
-
-          <div className="pt-6 border-t border-slate-800 mt-4 space-y-4">
-            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Affiliations</div>
-            <div className="p-4 rounded-2xl bg-slate-500/70 border border-slate-400/70">
-              <div className="flex flex-col items-center gap-4">
-                <img
-                  src="/logos/Logo Lab (transparent bg).png"
-                  alt="Plant Genome Regulation Laboratory"
-                  className="h-20 w-auto object-contain opacity-100"
-                />
-                <img
-                  src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
-                  alt="Nucleo Milenio PhytoLearning"
-                  className="h-20 w-auto object-contain opacity-100 scale-[1.5]"
-                />
-              </div>
+          {activeView === 'network' && networkView === 'pathway' && (
+            <div className="pt-6 border-t border-slate-800 mt-4">
+              <PathwaySelector onPathwayChange={setPathwayData} />
             </div>
-          </div>
+          )}
         </nav>
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 bg-slate-950/30">
-        {activeView === 'explorer' ? (
-          <header className="h-20 bg-slate-900/50 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between px-8 shrink-0 z-10 shadow-lg">
+        <header className="h-20 bg-slate-900/50 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between px-4 md:px-8 shrink-0 z-10 shadow-lg">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-200">☰</button>
             <div className="flex flex-col gap-1 items-start">
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Regulatory Dashboard</h2>
@@ -277,171 +276,26 @@ const App: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
 
-            <div className="flex gap-3">
-              <div className="flex items-center bg-slate-800/50 rounded-lg p-1 border border-slate-700">
-                <button onClick={() => setExportFormat('geneId')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'geneId' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>ID</button>
-                <button onClick={() => setExportFormat('symbol')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'symbol' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>Symbol</button>
-              </div>
-              <button onClick={handleDownloadTSV} className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-black hover:bg-emerald-500/20 transition-all uppercase tracking-widest flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-                TSV
-              </button>
-              <button onClick={handleAiAnalysis} disabled={filteredData.length === 0 || isAnalyzing} className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black hover:shadow-lg hover:shadow-emerald-500/30 disabled:opacity-50 transition-all uppercase tracking-widest">
-                {isAnalyzing ? 'Analyzing...' : 'Gemini AI'}
-              </button>
+          <div className="flex gap-3">
+            <div className="flex items-center bg-slate-800/50 rounded-lg p-1 border border-slate-700">
+              <button onClick={() => setExportFormat('geneId')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'geneId' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>ID</button>
+              <button onClick={() => setExportFormat('symbol')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'symbol' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>Symbol</button>
             </div>
-          </header>
-        ) : activeView === 'landing' ? null : (
-          <header className="h-16 bg-slate-900/40 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between px-8 shrink-0 z-10 shadow-lg">
-            <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Regulatory Dashboard</h2>
-            <div className="text-[10px] text-slate-500 uppercase tracking-widest">
-              {activeView === 'network' ? 'Network View' : activeView === 'enrichment' ? 'Enrichment' : 'AI'}
-            </div>
-          </header>
-        )}
+            <button onClick={handleDownloadTSV} className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-black hover:bg-emerald-500/20 transition-all uppercase tracking-widest flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+              TSV
+            </button>
+            <button onClick={handleAiAnalysis} disabled={filteredData.length === 0 || isAnalyzing} className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black hover:shadow-lg hover:shadow-emerald-500/30 disabled:opacity-50 transition-all uppercase tracking-widest">{isAnalyzing ? 'Analyzing...' : 'Gemini AI'}</button>
+          </div>
+        </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
           {errorMessage && <div className="mb-6 p-4 bg-red-900/20 text-red-400 text-sm font-bold rounded-2xl border border-red-800 flex justify-between items-center backdrop-blur-sm"><span>{errorMessage}</span><button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-red-300">✕</button></div>}
 
-          {activeView === 'landing' ? (
-            <div className="min-h-[calc(100vh-6rem)] flex items-center">
-              <div className="w-full space-y-10">
-                <div className="max-w-5xl mx-auto text-center">
-                  <h3 className="text-4xl md:text-5xl font-black text-white tracking-tight">Plant Regulatory Network Tool</h3>
-                  <p className="text-lg md:text-xl text-slate-300 mt-4">
-                    Rapid hypothesis testing for TF–target regulation and GO-driven biology.
-                  </p>
-                  <div className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-sm md:text-base font-bold shadow-[0_0_20px_rgba(16,185,129,0.25)]">
-                    Start from one of the three tabs on the left sidebar.
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <button
-                    onClick={() => setActiveView('explorer')}
-                    className="text-left p-6 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-emerald-500/60 transition-all shadow-2xl flex flex-col"
-                  >
-                    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-3 min-h-[14px]">Explore Data</div>
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden">
-                      <div className="grid grid-cols-5 text-[10px] font-black uppercase text-emerald-400 border-b border-slate-800">
-                        <div className="px-3 py-2 col-span-2">TF</div>
-                        <div className="px-3 py-2 col-span-2">Target</div>
-                        <div className="px-3 py-2">Evidence</div>
-                      </div>
-                      <div className="text-[11px] text-slate-300">
-                        <div className="grid grid-cols-5 px-3 py-2 border-b border-slate-800">
-                          <div className="col-span-2 font-bold text-emerald-300">MYBR1</div>
-                          <div className="col-span-2">AUX1</div>
-                          <div className="text-[9px] font-black">
-                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500 text-white">DAP</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-5 px-3 py-2 border-b border-slate-800">
-                          <div className="col-span-2 font-bold text-emerald-300">HB6</div>
-                          <div className="col-span-2">GH9C2</div>
-                          <div className="text-[9px] font-black">
-                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-white">TARGET</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-5 px-3 py-2">
-                          <div className="col-span-2 font-bold text-emerald-300">ABF2</div>
-                          <div className="col-span-2">COL5</div>
-                          <div className="text-[9px] font-black">
-                            <span className="px-1.5 py-0.5 rounded-full bg-violet-500 text-white">CHIP</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 text-xs text-slate-400">
-                      Function: filter TF–target interactions by evidence and GO context.
-                    </div>
-                    <div className="mt-2 text-[11px] text-slate-300">
-                      Question: Which targets does MYBR1 regulate under Water Deprivation?
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveView('network')}
-                    className="text-left p-6 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-emerald-500/60 transition-all shadow-2xl flex flex-col"
-                  >
-                    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-3 min-h-[14px]">Network View</div>
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <svg viewBox="0 0 200 120" className="w-full h-[160px]">
-                        <defs>
-                          <linearGradient id="n1" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0" stopColor="#10b981" />
-                            <stop offset="1" stopColor="#14b8a6" />
-                          </linearGradient>
-                        </defs>
-                        <line x1="40" y1="30" x2="100" y2="60" stroke="#334155" strokeWidth="2" />
-                        <line x1="160" y1="30" x2="100" y2="60" stroke="#334155" strokeWidth="2" />
-                        <line x1="100" y1="60" x2="60" y2="100" stroke="#334155" strokeWidth="2" />
-                        <line x1="100" y1="60" x2="140" y2="100" stroke="#334155" strokeWidth="2" />
-                        <circle cx="100" cy="60" r="16" fill="url(#n1)" />
-                        <circle cx="40" cy="30" r="10" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-                        <circle cx="160" cy="30" r="10" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-                        <circle cx="60" cy="100" r="10" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-                        <circle cx="140" cy="100" r="10" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-                      </svg>
-                    </div>
-                    <div className="mt-4 text-xs text-slate-400">
-                      Function: visualize direct, hierarchical, and pathway networks.
-                    </div>
-                    <div className="mt-2 text-[11px] text-slate-300">
-                      Question: How does ABF2 connect to drought-related subnetworks?
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveView('enrichment')}
-                    className="text-left p-6 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-emerald-500/60 transition-all shadow-2xl flex flex-col"
-                  >
-                    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-3 min-h-[14px]">Enrichment</div>
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <div className="grid grid-cols-5 gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                        {['ABF2', 'HB6', 'NLP7', 'TGA1', 'MYBR1'].map((tf) => (
-                          <div key={tf} className="text-center">{tf}</div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-5 gap-1">
-                        {['#6d28d9', '#7c3aed', '#10b981', '#22c55e', '#34d399'].map((color, i) => (
-                          <div key={i} className="h-6 rounded-md" style={{ background: color }} />
-                        ))}
-                      </div>
-                      <div className="mt-2">
-                        <div className="h-2 rounded-full bg-gradient-to-r from-violet-500 to-emerald-400" />
-                        <div className="mt-1 text-[10px] text-slate-400 text-center">
-                          Water Deprivation Enrichment
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 text-xs text-slate-400">
-                      Function: target enrichment across TFs in biological processes.
-                    </div>
-                    <div className="mt-2 text-[11px] text-slate-300">
-                      Question: Are TF targets enriched in Water Deprivation, Nitrate, or Drought GO terms?
-                    </div>
-                  </button>
-                </div>
-
-                <div className="text-[11px] text-slate-500 text-center">
-                  Built on ConnectTF (M.D. Brooks, 2021). Developed by Gabriela Vásquez, Luciano Ahumada, and Nicolás Müller.
-                  Plant Genome Regulation Laboratory, Universidad Andrés Bello, Chile. pgrl.cl
-                </div>
-              </div>
-            </div>
-          ) : activeView === 'explorer' ? (
+          {activeView === 'explorer' ? (
             <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="bg-gradient-to-br from-slate-900 via-slate-900/80 to-emerald-900/30 rounded-3xl border border-slate-800 shadow-2xl p-6 md:p-8">
-                <div className="flex flex-col gap-3">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Explore Data</div>
-                  <h3 className="text-2xl md:text-3xl font-black text-white">Search and filter interactions</h3>
-                  <p className="text-sm text-slate-300">
-                    Use the controls above to filter by GO context, TFs, and export tables.
-                  </p>
-                </div>
-              </div>
               <StatsPanel data={filteredData} />
               <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-800 overflow-hidden">
                 <div className="p-6 border-b border-slate-800 bg-slate-900/30 flex items-center justify-between">
@@ -509,16 +363,15 @@ const App: React.FC = () => {
               pathwayMapping={pathwayMapping}
               pathwayData={pathwayData}
               geneMapping={geneMapping}
+              onViewChange={setNetworkView}
             />
           ) : activeView === 'enrichment' ? (
-            <div className="space-y-6 animate-in fade-in duration-500">
-              <EnrichmentPanel
-                data={filteredData}
-                selectedSources={selectedSources}
-                minConfidence={minConfidence}
-                goAnnotations={goAnnotations}
-              />
-            </div>
+            <EnrichmentPanel
+              data={data}
+              selectedSources={selectedSources}
+              minConfidence={minConfidence}
+              goAnnotations={goAnnotations}
+            />
           ) : (
             <div className="bg-white p-12 rounded-[48px] border border-slate-100 shadow-2xl max-w-4xl mx-auto mt-10 animate-in zoom-in-95 duration-500">
               <h3 className="text-3xl font-black mb-8 text-slate-900 tracking-tight">Interpretación Funcional (AI)</h3>
@@ -543,7 +396,6 @@ const App: React.FC = () => {
             </div>
           )
           }
-
         </div>
       </main>
     </div>
