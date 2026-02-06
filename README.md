@@ -1,15 +1,15 @@
-# Plant Regulatory Network Tool
+# PRINT (Plant Regulatory Information Network Tool)
 
 <div align="center">
-  <h3>Plant Regulatory Network Tool</h3>
-  <p>Plant Regulatory Network Tool is a web-based tool for the integration, filtering, and visualization of plant gene regulatory networks using functional annotations and curated regulatory interaction datasets.</p>
+  <h3>PRINT (Plant Regulatory Information Network Tool)</h3>
+  <p>PRINT is a web-based tool for the integration, filtering, and visualization of plant gene regulatory networks using functional annotations and curated regulatory interaction datasets.</p>
 </div>
 
 ---
 
 ## 🧬 Description (Overview)
 
-Plant Regulatory Network Tool is a computational tool developed by the **Plant Genome Regulation Lab (Núcleo Milenio PhytoLearning)** to explore plant gene regulatory networks through the integration of multiple sources of regulatory evidence.
+PRINT (Plant Regulatory Information Network Tool) is a computational tool developed by the **Plant Genome Regulation Lab (Núcleo Milenio PhytoLearning)** to explore plant gene regulatory networks through the integration of multiple sources of regulatory evidence.
 
 The tool enables users to filter and visualize gene regulatory networks based on functional annotations, with a particular focus on stress- and hormone-related biological processes. Regulatory interactions are integrated from curated databases such as ConnectTF, together with inferred gene regulatory networks and Gene Ontology annotations.
 
@@ -76,7 +76,7 @@ Data files are served statically from `public/data/` and ingested by the `DataSe
 
 ---
 
-*Plant Regulatory Network Tool is designed for rapid hypothesis generation in plant systems biology.*
+*PRINT is designed for rapid hypothesis generation in plant systems biology.*
 # Workflow Oficial de Colaboración (Git)
 
 ## Flujo con rama `dev` (recomendado)
