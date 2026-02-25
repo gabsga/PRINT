@@ -40,7 +40,7 @@ const App: React.FC = () => {
   const [selectedPathway, setSelectedPathway] = useState<string>('all');
   const [selectedGoTerm, setSelectedGoTerm] = useState<string>('all');
   const [priorityTfFilter, setPriorityTfFilter] = useState<string | null>(null);
-  const [exportFormat, setExportFormat] = useState<'symbol' | 'id'>('geneId'); // Default to GeneID as requested
+  const [exportFormat, setExportFormat] = useState<'symbol' | 'geneId'>('geneId');
 
   const [selectedSources, setSelectedSources] = useState<string[]>(['TARGET', 'DAP', 'CHIP']);
   const [graphScope, setGraphScope] = useState<'global' | 'direct' | 'cascade'>('global');
@@ -94,21 +94,32 @@ const App: React.FC = () => {
   }, [pathwayMapping]);
 
   const filteredData = useMemo(() => {
+    const normalizedSearch = debouncedSearchTerm.trim().toUpperCase();
+    const selectedGoGeneSet = selectedGoTerm === 'all'
+      ? null
+      : new Set((goAnnotations[selectedGoTerm] || []).map(g => g.toUpperCase()));
+
     let output = data.filter(i => {
-      const matchesSearch = i.tf.toUpperCase().includes(debouncedSearchTerm.toUpperCase()) || i.target.toUpperCase().includes(debouncedSearchTerm.toUpperCase());
+      const matchesSearch = normalizedSearch === '' || [i.tf, i.target, i.tfId, i.targetId]
+        .some(g => (g || '').toUpperCase().includes(normalizedSearch));
       const matchesConfidence = i.evidenceCount >= minConfidence;
 
       let matchesPathway = true;
       if (selectedPathway !== 'all') {
-        const p1 = pathwayMapping[i.tf.toUpperCase()] || [];
-        const p2 = pathwayMapping[i.target.toUpperCase()] || [];
+        const p1 = [
+          ...(pathwayMapping[i.tf.toUpperCase()] || []),
+          ...(pathwayMapping[(i.tfId || '').toUpperCase()] || [])
+        ];
+        const p2 = [
+          ...(pathwayMapping[i.target.toUpperCase()] || []),
+          ...(pathwayMapping[(i.targetId || '').toUpperCase()] || [])
+        ];
         matchesPathway = p1.includes(selectedPathway) || p2.includes(selectedPathway);
       }
 
       let matchesGo = true;
-      if (selectedGoTerm !== 'all') {
-        const genesInGo = goAnnotations[selectedGoTerm] || [];
-        matchesGo = genesInGo.includes(i.tf.toUpperCase()) || genesInGo.includes(i.target.toUpperCase());
+      if (selectedGoGeneSet) {
+        matchesGo = [i.tf, i.target, i.tfId, i.targetId].some(g => selectedGoGeneSet.has((g || '').toUpperCase()));
       }
 
       let matchesTf = true;
@@ -148,18 +159,23 @@ const App: React.FC = () => {
   }, [data, debouncedSearchTerm, minConfidence, selectedPathway, pathwayMapping, selectedGoTerm, goAnnotations, priorityTfFilter, selectedSources, graphScope]);
 
   const handleDownloadTSV = () => {
+    const sanitizeTSVCell = (value: string | number) => String(value).replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
     const headers = ['TF', 'Target', 'Evidence_Sources', 'Direction', 'Evidence_Count', 'Processes'];
     const rows = filteredData.map(row => {
       const tfVal = exportFormat === 'symbol' ? row.tf : (row.tfId || row.tf);
       const targetVal = exportFormat === 'symbol' ? row.target : (row.targetId || row.target);
+      const processes = Array.from(new Set([
+        ...(pathwayMapping[row.target.toUpperCase()] || []),
+        ...(pathwayMapping[(row.targetId || '').toUpperCase()] || [])
+      ])).join('|');
 
       return [
-        tfVal,
-        targetVal,
-        row.sources.join('|'),
-        row.direction,
-        row.evidenceCount,
-        (pathwayMapping[row.target] || []).join('|')
+        sanitizeTSVCell(tfVal),
+        sanitizeTSVCell(targetVal),
+        sanitizeTSVCell(row.sources.join('|')),
+        sanitizeTSVCell(row.direction),
+        sanitizeTSVCell(row.evidenceCount),
+        sanitizeTSVCell(processes)
       ].join('\t');
     });
 
@@ -317,17 +333,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex items-center bg-slate-800/50 rounded-lg p-1 border border-slate-700">
-              <button onClick={() => setExportFormat('geneId')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'geneId' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>ID</button>
-              <button onClick={() => setExportFormat('symbol')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'symbol' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>Symbol</button>
-            </div>
-            <button onClick={handleDownloadTSV} className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-black hover:bg-emerald-500/20 transition-all uppercase tracking-widest flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-              TSV
-            </button>
-            <button onClick={handleAiAnalysis} disabled={filteredData.length === 0 || isAnalyzing} className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black hover:shadow-lg hover:shadow-emerald-500/30 disabled:opacity-50 transition-all uppercase tracking-widest">{isAnalyzing ? 'Analyzing...' : 'Gemini AI'}</button>
-          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -345,9 +350,32 @@ const App: React.FC = () => {
               </div>
               {showExplorerSummary && <StatsPanel data={filteredData} />}
               <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-800 overflow-hidden">
-                <div className="p-6 border-b border-slate-800 bg-slate-900/30 flex items-center justify-between">
-                  <input type="text" placeholder="Search gene, TF or keyword..." className="max-w-xs w-full pl-4 pr-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-2xl text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500 text-slate-200 placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                  <span className="text-xs font-bold text-emerald-400">{filteredData.length} interactions visible</span>
+                <div className="p-6 border-b border-slate-800 bg-slate-900/30">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div className="w-full lg:max-w-xl">
+                      <input
+                        type="text"
+                        placeholder="Search by Gene ID (AGI) or Gene Symbol..."
+                        className="w-full pl-4 pr-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-2xl text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500 text-slate-200 placeholder-slate-500"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      <p className="mt-2 text-[11px] text-slate-400">
+                        Search supports Gene ID (AGI; e.g. AT1G01010) and Gene Symbol (e.g. ABI5).
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center bg-slate-800/50 rounded-lg p-1 border border-slate-700">
+                        <button onClick={() => setExportFormat('geneId')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'geneId' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>ID</button>
+                        <button onClick={() => setExportFormat('symbol')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'symbol' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}>Symbol</button>
+                      </div>
+                      <button onClick={handleDownloadTSV} disabled={filteredData.length === 0} className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-black hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all uppercase tracking-widest flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        TSV
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs font-bold text-emerald-400">{filteredData.length} interactions visible</div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
