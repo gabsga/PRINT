@@ -8,7 +8,7 @@ Este script convierte archivos KGML de KEGG a formato TSV compatible con la visu
 
 ```bash
 # Navegar al proyecto
-cd /mnt/c/Users/Usuario/Downloads/the-final-genereg-integrator
+cd /mnt/c/Users/Usuario/Downloads/PRINT
 
 # Ejecutar para ABA
 node scripts/parseKeggKGML_simple.js ath04075.xml public/data/pathways/aba ABA
