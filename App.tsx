@@ -47,6 +47,7 @@ const App: React.FC = () => {
   const [pathwayData, setPathwayData] = useState<PathwayData | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [networkView, setNetworkView] = useState<NetworkView>('direct');
+  const [showExplorerSummary, setShowExplorerSummary] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
 
   const PRIORITY_GO_TERMS = [
@@ -270,7 +271,7 @@ const App: React.FC = () => {
           )}
         </nav>
         <div className="p-4 border-t border-slate-800">
-          <div className="bg-slate-500/70 border border-slate-400 rounded-2xl px-4 py-3 flex items-center justify-center gap-8 shadow-lg shadow-slate-950/30 overflow-hidden">
+          <div className="bg-slate-400/75 border border-slate-300 rounded-2xl px-4 py-3 flex items-center justify-center gap-8 shadow-lg shadow-slate-950/30 overflow-hidden">
             <div className="h-14 w-28 flex items-center justify-center shrink-0">
               <img
                 src="/logos/Logo Lab (transparent bg).png"
@@ -333,8 +334,16 @@ const App: React.FC = () => {
           {errorMessage && <div className="mb-6 p-4 bg-red-900/20 text-red-400 text-sm font-bold rounded-2xl border border-red-800 flex justify-between items-center backdrop-blur-sm"><span>{errorMessage}</span><button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-red-300">✕</button></div>}
 
           {activeView === 'explorer' ? (
-            <div className="space-y-6 animate-in fade-in duration-500">
-              <StatsPanel data={filteredData} />
+            <div className="animate-in fade-in duration-500 space-y-4">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowExplorerSummary(v => !v)}
+                  className="px-4 py-2 bg-slate-800/70 border border-slate-700 text-slate-300 rounded-xl text-xs font-bold hover:border-emerald-500/50 hover:text-emerald-300 transition-all"
+                >
+                  {showExplorerSummary ? 'Hide Summary' : 'Show Summary'}
+                </button>
+              </div>
+              {showExplorerSummary && <StatsPanel data={filteredData} />}
               <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-800 overflow-hidden">
                 <div className="p-6 border-b border-slate-800 bg-slate-900/30 flex items-center justify-between">
                   <input type="text" placeholder="Search gene, TF or keyword..." className="max-w-xs w-full pl-4 pr-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-2xl text-sm outline-none shadow-sm focus:ring-2 focus:ring-emerald-500 text-slate-200 placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -348,13 +357,11 @@ const App: React.FC = () => {
                         <th className="px-6 py-4">Target Gene</th>
                         <th className="px-6 py-4">Evidence</th>
                         <th className="px-6 py-4">Direction</th>
-                        <th className="px-6 py-4">Biological Context</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                       {filteredData.slice(0, 100).map((row, idx) => {
                         const isHub = !!hubMapping[row.target];
-                        const hub = hubMapping[row.target];
 
                         return (
                           <tr key={idx} className="hover:bg-emerald-500/5 transition-colors group">
@@ -374,17 +381,6 @@ const App: React.FC = () => {
                             </td>
                             <td className="px-6 py-4">
                               <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tight ${row.direction === 'activation' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : row.direction === 'repression' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-700 text-slate-400'}`}>{row.direction}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              {isHub ? (
-                                <div className="text-[10px] font-medium text-teal-400 italic max-w-xs truncate" title={hub?.genesList.join(', ')}>
-                                  Hub Reg (GeneReg)
-                                </div>
-                              ) : (
-                                <div className="flex flex-wrap gap-1">
-                                  {(pathwayMapping[row.target] || []).slice(0, 3).map(p => <span key={p} className="text-[8px] font-bold bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700">{p}</span>)}
-                                </div>
-                              )}
                             </td>
                           </tr>
                         );

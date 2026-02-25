@@ -176,7 +176,7 @@ export default function Landing({ onEnter }: LandingProps) {
         </section>
 
         <footer className="mt-10 pt-6 border-t border-slate-800 flex flex-col items-center gap-4 text-xs text-slate-500">
-          <div className="w-full max-w-3xl bg-slate-500/70 border border-slate-400 rounded-2xl px-6 py-4 flex items-center justify-center gap-10 shadow-lg shadow-slate-950/30 overflow-hidden">
+          <div className="w-full max-w-3xl bg-slate-400/75 border border-slate-300 rounded-2xl px-6 py-4 flex items-center justify-center gap-10 shadow-lg shadow-slate-950/30 overflow-hidden">
             <div className="h-16 w-36 flex items-center justify-center shrink-0">
               <img
                 src="/logos/Logo Lab (transparent bg).png"
