@@ -189,6 +189,12 @@ const App: React.FC = () => {
       <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
         <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
         <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">PRINT</h2>
+        <p className="text-slate-300 mt-1 text-sm font-semibold text-center px-4">
+          Plant Regulatory Information Network Tool
+        </p>
+        <p className="text-slate-400 mt-1 text-sm text-center px-4">
+          PRINT your hypotheses into testable regulatory networks.
+        </p>
         <p className="text-slate-400 mt-2 animate-pulse">{loadingMsg}</p>
       </div>
     );
@@ -264,17 +270,21 @@ const App: React.FC = () => {
           )}
         </nav>
         <div className="p-4 border-t border-slate-800">
-          <div className="bg-slate-700/60 border border-slate-600 rounded-2xl px-4 py-3 flex items-center justify-center gap-6 shadow-lg shadow-slate-950/30">
-            <img
-              src="/logos/Logo Lab (transparent bg).png"
-              alt="Logo Lab"
-              className="h-16 w-auto opacity-90"
-            />
-            <img
-              src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
-              alt="PhytoLearning"
-              className="h-36 w-auto opacity-95"
-            />
+          <div className="bg-slate-500/70 border border-slate-400 rounded-2xl px-4 py-3 flex items-center justify-center gap-8 shadow-lg shadow-slate-950/30 overflow-hidden">
+            <div className="h-14 w-28 flex items-center justify-center shrink-0">
+              <img
+                src="/logos/Logo Lab (transparent bg).png"
+                alt="Logo Lab"
+                className="max-h-full max-w-full object-contain opacity-90"
+              />
+            </div>
+            <div className="h-14 w-16 flex items-center justify-center shrink-0">
+              <img
+                src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
+                alt="PhytoLearning"
+                className="max-h-full max-w-full object-contain opacity-95 scale-[3] origin-center"
+              />
+            </div>
           </div>
         </div>
       </aside>
@@ -286,12 +296,6 @@ const App: React.FC = () => {
             <div className="flex flex-col gap-1 items-start">
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Regulatory Dashboard</h2>
-                <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-1.5 shadow-sm backdrop-blur-sm">
-                  <span className="text-[10px] font-black text-emerald-400 uppercase">GO Context:</span>
-                  <select value={selectedGoTerm} onChange={(e) => setSelectedGoTerm(e.target.value)} className="bg-transparent text-xs font-bold text-teal-400 outline-none cursor-pointer max-w-[250px]">
-                    {PRIORITY_GO_TERMS.map(p => <option key={p.id} value={p.id} className="bg-slate-800">{p.label}</option>)}
-                  </select>
-                </div>
               </div>
 
               <div className="flex gap-2">

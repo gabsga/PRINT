@@ -35,7 +35,7 @@ export default function Landing({ onEnter }: LandingProps) {
             Plant Regulatory Information Network Tool
           </p>
           <p className="text-slate-400 max-w-2xl">
-            Rapid hypothesis testing for TF–target regulation and GO-driven biology.
+            PRINT your hypotheses into testable regulatory networks.
           </p>
           <div className="px-4 py-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 text-emerald-300 text-sm font-semibold">
             Start from one of the three tabs on the left sidebar.
@@ -176,17 +176,21 @@ export default function Landing({ onEnter }: LandingProps) {
         </section>
 
         <footer className="mt-10 pt-6 border-t border-slate-800 flex flex-col items-center gap-4 text-xs text-slate-500">
-          <div className="w-full max-w-3xl bg-slate-700/60 border border-slate-600 rounded-2xl px-6 py-4 flex items-center justify-center gap-8 shadow-lg shadow-slate-950/30">
-            <img
-              src="/logos/Logo Lab (transparent bg).png"
-              alt="Logo Lab"
-              className="h-16 w-auto opacity-90"
-            />
-            <img
-              src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
-              alt="PhytoLearning"
-              className="h-36 w-auto opacity-95"
-            />
+          <div className="w-full max-w-3xl bg-slate-500/70 border border-slate-400 rounded-2xl px-6 py-4 flex items-center justify-center gap-10 shadow-lg shadow-slate-950/30 overflow-hidden">
+            <div className="h-16 w-36 flex items-center justify-center shrink-0">
+              <img
+                src="/logos/Logo Lab (transparent bg).png"
+                alt="Logo Lab"
+                className="max-h-full max-w-full object-contain opacity-90"
+              />
+            </div>
+            <div className="h-16 w-20 flex items-center justify-center shrink-0">
+              <img
+                src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
+                alt="PhytoLearning"
+                className="max-h-full max-w-full object-contain opacity-95 scale-[3] origin-center"
+              />
+            </div>
           </div>
           <div className="text-center max-w-3xl">
             This data integration was done with ConnecTF (M.D. Brooks, 2021). Developed by Gabriela
