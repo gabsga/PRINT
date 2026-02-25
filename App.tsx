@@ -2,9 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { IntegratedInteraction, AnalysisResult, AppView, PathwayMapping, HubMapping } from './types';
 import StatsPanel from './components/StatsPanel';
-import NetworkVisualization, { NetworkView } from './components/NetworkVisualization';
+import NetworkVisualization from './components/NetworkVisualization';
 import EnrichmentPanel from './components/EnrichmentPanel';
-import PathwaySelector from './components/PathwaySelector';
 import Landing from './components/Landing';
 import { analyzeNetwork } from './services/geminiService';
 import { loadIntegratedData } from './services/dataLoader';
@@ -46,7 +45,6 @@ const App: React.FC = () => {
   const [graphScope, setGraphScope] = useState<'global' | 'direct' | 'cascade'>('global');
   const [pathwayData, setPathwayData] = useState<PathwayData | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [networkView, setNetworkView] = useState<NetworkView>('direct');
   const [showExplorerSummary, setShowExplorerSummary] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
 
@@ -274,11 +272,6 @@ const App: React.FC = () => {
             Enrichment
           </button>
 
-          {activeView === 'network' && networkView === 'pathway' && (
-            <div className="pt-6 border-t border-slate-800 mt-4">
-              <PathwaySelector onPathwayChange={setPathwayData} />
-            </div>
-          )}
         </nav>
         <div className="p-4 border-t border-slate-800">
           <div className="bg-slate-400/75 border border-slate-300 rounded-2xl px-4 py-3 flex items-center justify-center gap-8 shadow-lg shadow-slate-950/30 overflow-hidden">
@@ -421,7 +414,7 @@ const App: React.FC = () => {
               pathwayMapping={pathwayMapping}
               pathwayData={pathwayData}
               geneMapping={geneMapping}
-              onViewChange={setNetworkView}
+              onPathwayChange={setPathwayData}
             />
           ) : activeView === 'enrichment' ? (
             <EnrichmentPanel

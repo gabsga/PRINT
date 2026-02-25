@@ -3,10 +3,11 @@ import { loadPathway, getAvailablePathways, PathwayData } from '../services/path
 
 interface PathwaySelectorProps {
     onPathwayChange: (pathway: PathwayData | null) => void;
+    defaultPathwayId?: string;
 }
 
-export default function PathwaySelector({ onPathwayChange }: PathwaySelectorProps) {
-    const [selectedPathway, setSelectedPathway] = useState<string>('');
+export default function PathwaySelector({ onPathwayChange, defaultPathwayId = 'hormone_signaling' }: PathwaySelectorProps) {
+    const [selectedPathway, setSelectedPathway] = useState<string>(defaultPathwayId);
     const [loading, setLoading] = useState(false);
     const availablePathways = getAvailablePathways();
 
@@ -25,14 +26,16 @@ export default function PathwaySelector({ onPathwayChange }: PathwaySelectorProp
         onPathwayChange(pathwayData);
     };
 
+    useEffect(() => {
+        if (defaultPathwayId) {
+            void handlePathwayChange(defaultPathwayId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     return (
-        <div style={{
-            padding: '15px',
-            backgroundColor: '#1a1a2e',
-            borderRadius: '8px',
-            marginBottom: '15px'
-        }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '14px' }}>
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-4 mb-2">
+            <h3 className="m-0 mb-2 text-white text-sm font-bold">
                 Pathway View
             </h3>
 
@@ -40,18 +43,8 @@ export default function PathwaySelector({ onPathwayChange }: PathwaySelectorProp
                 value={selectedPathway}
                 onChange={(e) => handlePathwayChange(e.target.value)}
                 disabled={loading}
-                style={{
-                    width: '100%',
-                    padding: '8px',
-                    backgroundColor: '#16213e',
-                    color: '#fff',
-                    border: '1px solid #0f3460',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    cursor: loading ? 'wait' : 'pointer'
-                }}
+                className="w-full px-3 py-2 bg-slate-800/60 text-slate-100 border border-slate-600 rounded-lg text-sm disabled:cursor-wait"
             >
-                <option value="">Select a pathway...</option>
                 {availablePathways.map(pathway => (
                     <option key={pathway.id} value={pathway.id}>
                         {pathway.name}
@@ -60,25 +53,13 @@ export default function PathwaySelector({ onPathwayChange }: PathwaySelectorProp
             </select>
 
             {loading && (
-                <div style={{
-                    marginTop: '10px',
-                    color: '#888',
-                    fontSize: '12px',
-                    textAlign: 'center'
-                }}>
+                <div className="mt-2 text-slate-400 text-xs text-center">
                     Loading pathway data...
                 </div>
             )}
 
             {selectedPathway && !loading && (
-                <div style={{
-                    marginTop: '10px',
-                    padding: '8px',
-                    backgroundColor: '#0f3460',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    color: '#aaa'
-                }}>
+                <div className="mt-2 px-2 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-[11px] text-emerald-300">
                     <div>Pathway loaded successfully</div>
                 </div>
             )}

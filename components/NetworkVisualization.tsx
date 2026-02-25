@@ -4,6 +4,7 @@ import DirectTargetsView from './DirectTargetsView';
 import HierarchicalView from './HierarchicalView';
 import PathwayVisualization from './PathwayVisualization';
 import { PathwayData } from '../services/pathwayLoader';
+import PathwaySelector from './PathwaySelector';
 
 export type NetworkView = 'direct' | 'hierarchical' | 'pathway';
 
@@ -13,9 +14,10 @@ interface NetworkVisualizationProps {
     pathwayData?: PathwayData | null;
     geneMapping?: Record<string, string>;
     onViewChange?: (view: NetworkView) => void;
+    onPathwayChange?: (pathway: PathwayData | null) => void;
 }
 
-export default function NetworkVisualization({ data, pathwayMapping, pathwayData, geneMapping, onViewChange }: NetworkVisualizationProps) {
+export default function NetworkVisualization({ data, pathwayMapping, pathwayData, geneMapping, onViewChange, onPathwayChange }: NetworkVisualizationProps) {
     const [view, setView] = useState<NetworkView>('direct');
     const [selectedTF, setSelectedTF] = useState('');
 
@@ -70,6 +72,13 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                 </button>
             </div>
 
+            {view === 'pathway' && onPathwayChange && (
+                <PathwaySelector
+                    onPathwayChange={onPathwayChange}
+                    defaultPathwayId="hormone_signaling"
+                />
+            )}
+
             {/* View Content */}
             {view === 'direct' && (
                 <DirectTargetsView
@@ -101,7 +110,7 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                         <div className="text-center">
                             <div className="text-6xl mb-4">🧬</div>
                             <div className="text-xl font-bold text-slate-400">No pathway selected</div>
-                            <div className="text-sm text-slate-500 mt-2">Select a pathway from the sidebar to view</div>
+                            <div className="text-sm text-slate-500 mt-2">Select a pathway above to view</div>
                         </div>
                     </div>
                 )
