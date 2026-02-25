@@ -315,21 +315,6 @@ const App: React.FC = () => {
                 <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Regulatory Dashboard</h2>
               </div>
 
-              <div className="flex gap-2">
-                {PRIORITY_TFS.map(tf => (
-                  <button
-                    key={tf}
-                    onClick={() => {
-                      const newVal = priorityTfFilter === tf ? null : tf;
-                      setPriorityTfFilter(newVal);
-                      if (newVal) setGraphScope('direct');
-                    }}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all ${priorityTfFilter === tf ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-emerald-500/50'}`}
-                  >
-                    {tf}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
@@ -363,6 +348,23 @@ const App: React.FC = () => {
                       <p className="mt-2 text-[11px] text-slate-400">
                         Search supports Gene ID (AGI; e.g. AT1G01010) and Gene Symbol (e.g. ABI5).
                       </p>
+                      <p className="mt-3 text-[11px] text-slate-400">
+                        Tambien puedes hacer una busqueda rapida usando genes de interes frecuente:
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {PRIORITY_TFS.map(gene => {
+                          const isActive = searchTerm.trim().toUpperCase() === gene;
+                          return (
+                            <button
+                              key={gene}
+                              onClick={() => setSearchTerm(isActive ? '' : gene)}
+                              className={`px-3 py-1 rounded-md text-[11px] font-bold border transition-all ${isActive ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-emerald-500/50'}`}
+                            >
+                              {gene}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center bg-slate-800/50 rounded-lg p-1 border border-slate-700">
