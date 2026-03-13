@@ -188,33 +188,37 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
     const { min, max } = heatmapRange;
     const t = (value - min) / (max - min);
     const clamped = Math.max(0, Math.min(1, t));
-    const left = [196, 167, 225]; // purple
-    const right = [69, 194, 111]; // green
-    const r = Math.round(left[0] + (right[0] - left[0]) * clamped);
-    const g = Math.round(left[1] + (right[1] - left[1]) * clamped);
-    const b = Math.round(left[2] + (right[2] - left[2]) * clamped);
+    const left = [136, 126, 182];
+    const middle = [108, 154, 156];
+    const right = [44, 166, 128];
+    const localT = clamped < 0.5 ? clamped / 0.5 : (clamped - 0.5) / 0.5;
+    const from = clamped < 0.5 ? left : middle;
+    const to = clamped < 0.5 ? middle : right;
+    const r = Math.round(from[0] + (to[0] - from[0]) * localT);
+    const g = Math.round(from[1] + (to[1] - from[1]) * localT);
+    const b = Math.round(from[2] + (to[2] - from[2]) * localT);
     return `rgb(${r}, ${g}, ${b})`;
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-900/50 backdrop-blur-xl p-6 rounded-3xl shadow-2xl border border-slate-800">
+      <div className="print-panel p-6 rounded-3xl">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-xl font-black text-emerald-400">Enrichment (GO + Fisher)</h3>
-            <p className="text-xs text-slate-400 mt-1">Universo: Araport11 (IDs AT). TFs se evalúan por targets con evidencia ≥ {evidenceThreshold}.</p>
+            <h3 className="text-xl font-black text-[var(--print-mint)]">Enrichment (GO + Fisher)</h3>
+            <p className="text-xs text-[var(--print-fog)] mt-1">Universo: Araport11 (IDs AT). TFs se evalúan por targets con evidencia ≥ {evidenceThreshold}.</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-slate-800/50 rounded-lg p-1 border border-slate-700">
+            <div className="flex items-center bg-black/10 rounded-lg p-1 border border-[var(--print-line)]">
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1 text-[10px] font-bold rounded ${viewMode === 'table' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}
+                className={`px-3 py-1 text-[10px] font-bold rounded ${viewMode === 'table' ? 'print-button' : 'text-slate-400 hover:text-slate-300'}`}
               >
                 Tabla
               </button>
               <button
                 onClick={() => setViewMode('heatmap')}
-                className={`px-3 py-1 text-[10px] font-bold rounded ${viewMode === 'heatmap' ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:text-slate-300'}`}
+                className={`px-3 py-1 text-[10px] font-bold rounded ${viewMode === 'heatmap' ? 'print-button' : 'text-slate-400 hover:text-slate-300'}`}
               >
                 Heatmap
               </button>
@@ -223,7 +227,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
             <select
               value={evidenceThreshold}
               onChange={(e) => setEvidenceThreshold(Number(e.target.value))}
-              className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-xs font-bold text-teal-300 outline-none focus:ring-2 focus:ring-teal-500"
+              className="px-3 py-2 bg-black/10 border border-[var(--print-line)] rounded-xl text-xs font-bold text-[#69d7cf] outline-none focus:ring-2 focus:ring-[#69d7cf]"
               title="Evidencia mínima"
             >
               <option value={1}>≥1 evidencia</option>
@@ -231,25 +235,27 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
               <option value={3}>3 evidencias</option>
             </select>
 
-            <select
-              value={activeTerm}
-              onChange={(e) => setActiveTerm(e.target.value)}
-              className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-sm font-bold text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {availableTerms.map((term) => (
-                <option key={term.id} value={term.id} disabled={!term.available}>
-                  {term.label}{term.available ? '' : ' (sin datos)'}
-                </option>
-              ))}
-            </select>
+            {viewMode === 'table' && (
+              <select
+                value={activeTerm}
+                onChange={(e) => setActiveTerm(e.target.value)}
+                className="px-4 py-2 bg-black/10 border border-[var(--print-line)] rounded-xl text-sm font-bold text-[var(--print-mint)] outline-none focus:ring-2 focus:ring-[var(--print-mint)]"
+              >
+                {availableTerms.map((term) => (
+                  <option key={term.id} value={term.id} disabled={!term.available}>
+                    {term.label}{term.available ? '' : ' (sin datos)'}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
-        <div className="mt-4 text-xs text-slate-400 flex flex-wrap gap-4">
-          <div>Universe: <span className="text-emerald-300 font-bold">{loadingUniverse ? 'cargando...' : universeSize.toLocaleString()}</span></div>
-          <div>GO genes: <span className="text-teal-300 font-bold">{termGeneCount.toLocaleString()}</span></div>
-          <div>TFs evaluados: <span className="text-cyan-300 font-bold">{tfTargets.size.toLocaleString()}</span></div>
-                <div className="mt-2 text-[10px] text-slate-500">Fuente GO: TAIR (ATH_GO_GOSLIM.txt) obtenido el 03-02-2026.</div>
+        <div className="mt-4 text-xs text-[var(--print-fog)] flex flex-wrap gap-4">
+          <div>Universe: <span className="text-[var(--print-mint-soft)] font-bold">{loadingUniverse ? 'cargando...' : universeSize.toLocaleString()}</span></div>
+          <div>GO genes: <span className="text-[#69d7cf] font-bold">{termGeneCount.toLocaleString()}</span></div>
+          <div>TFs evaluados: <span className="text-[#efc98e] font-bold">{tfTargets.size.toLocaleString()}</span></div>
+          <div className="mt-2 text-[10px] text-[var(--print-fog)]">Fuente GO: TAIR (ATH_GO_GOSLIM.txt) obtenido el 03-02-2026.</div>
 </div>
 
         {viewMode === 'heatmap' && (
@@ -268,7 +274,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
                     return [...prev, term.id];
                   });
                 }}
-                className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${selectedTerms.includes(term.id) ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'} ${!term.available ? 'opacity-40 cursor-not-allowed' : ''}`}
+                className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${selectedTerms.includes(term.id) ? 'bg-[rgba(77,231,191,0.12)] text-[var(--print-mint-soft)] border-[rgba(77,231,191,0.28)]' : 'bg-black/10 text-slate-400 border-[var(--print-line)]'} ${!term.available ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 {term.label}
               </button>
@@ -283,18 +289,18 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
         )}
       </div>
 
-      <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-800 overflow-hidden">
-        <div className="p-6 border-b border-slate-800 bg-slate-900/30 flex items-center justify-between">
-          <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Top TFs</h4>
-          <div className="text-xs text-slate-400">Ordenado por p-valor (Fisher, cola derecha)</div>
+      <div className="print-panel rounded-3xl overflow-hidden">
+        <div className="p-6 border-b border-[var(--print-line)] bg-black/10 flex items-center justify-between">
+          <h4 className="text-sm font-black text-[var(--print-mint)] uppercase tracking-widest">Top TFs</h4>
+          <div className="text-xs text-[var(--print-fog)]">Ordenado por p-valor (Fisher, cola derecha)</div>
         </div>
 
         {results.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-sm">Selecciona un término GO con datos para ver resultados.</div>
+          <div className="p-8 text-center text-[var(--print-fog)] text-sm">Selecciona un término GO con datos para ver resultados.</div>
         ) : viewMode === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-900/50 text-[10px] text-emerald-400 font-bold uppercase tracking-widest border-b border-slate-800">
+              <thead className="bg-black/10 text-[10px] text-[var(--print-mint)] font-bold uppercase tracking-widest border-b border-[var(--print-line)]">
                 <tr>
                   <th className="px-6 py-4">TF</th>
                   <th className="px-6 py-4">Overlap</th>
@@ -305,10 +311,10 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
                   <th className="px-6 py-4">FDR</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-[var(--print-line)]">
                 {results.slice(0, 50).map((row) => (
-                  <tr key={row.tf} className={`hover:bg-emerald-500/5 transition-colors ${row.fdr > SIGNIFICANCE_FDR ? 'text-red-300' : ''}`}>
-                    <td className={`px-6 py-4 text-xs font-black ${row.fdr > SIGNIFICANCE_FDR ? 'text-red-300' : 'text-emerald-300'}`}>{row.tf}</td>
+                  <tr key={row.tf} className={`hover:bg-white/5 transition-colors ${row.fdr > SIGNIFICANCE_FDR ? 'text-red-300' : ''}`}>
+                    <td className={`px-6 py-4 text-xs font-black ${row.fdr > SIGNIFICANCE_FDR ? 'text-red-300' : 'text-[var(--print-mint-soft)]'}`}>{row.tf}</td>
                     <td className="px-6 py-4 text-xs text-slate-300">{row.overlap}</td>
                     <td className="px-6 py-4 text-xs text-slate-300">{row.tfTargets}</td>
                     <td className="px-6 py-4 text-xs text-slate-300">{row.pathwayGenes}</td>
@@ -320,7 +326,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
               </tbody>
             </table>
             {results.length > 50 && (
-              <div className="p-4 text-center text-xs text-slate-500 font-medium border-t border-slate-800">
+              <div className="p-4 text-center text-xs text-[var(--print-fog)] font-medium border-t border-[var(--print-line)]">
                 Mostrando 50 de {results.length}
               </div>
             )}
@@ -330,18 +336,18 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
             <div className="grid gap-2" style={{ gridTemplateColumns: `200px repeat(${heatmapTerms.length}, 90px)` }}>
               <div></div>
               {heatmapTerms.map((term) => (
-                <div key={term} className="text-[10px] uppercase tracking-widest text-slate-400 font-bold text-center">
+                <div key={term} className="text-[10px] uppercase tracking-widest text-[var(--print-fog)] font-bold text-center">
                   {term}
                 </div>
               ))}
               {heatmapRows.map((tf) => (
                 <React.Fragment key={tf}>
-                  <div className="text-xs font-bold pr-3 truncate text-emerald-300" title={tf}>{tf}</div>
+                  <div className="text-xs font-bold pr-3 truncate text-[var(--print-mint-soft)]" title={tf}>{tf}</div>
                   {heatmapTerms.map((term) => {
                     const row = byTermByTf.get(term)?.get(tf);
                     if (!row || !Number.isFinite(row.oddsRatio) || row.oddsRatio <= 0) {
                       return (
-                        <div key={term} className="h-12 w-[90px] rounded-md bg-slate-800 border border-slate-700" />
+                          <div key={term} className="h-12 w-[90px] rounded-md bg-black/10 border border-[var(--print-line)]" />
                       );
                     }
                     const log2 = Math.log2(row.oddsRatio);
@@ -363,16 +369,42 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
               ))}
             </div>
 
-            <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
+            <div className="mt-4 flex items-center gap-3 text-xs text-[var(--print-fog)]">
               <div className="h-3 w-40 rounded" style={{ background: `linear-gradient(90deg, ${heatmapColor(heatmapRange.min)} 0%, ${heatmapColor((heatmapRange.min + heatmapRange.max) / 2)} 50%, ${heatmapColor(heatmapRange.max)} 100%)` }}></div>
               <span>log2(odds-ratio): {heatmapRange.min.toFixed(1)} → {heatmapRange.max.toFixed(1)}</span>
             </div>
 
             {results.length > heatmapRows.length && (
-              <div className="pt-4 text-center text-xs text-slate-500 font-medium border-t border-slate-800 mt-4">
+              <div className="pt-4 text-center text-xs text-[var(--print-fog)] font-medium border-t border-[var(--print-line)] mt-4">
                 Mostrando {heatmapRows.length} de {results.length}
               </div>
             )}
+
+            <div className="mt-4 pt-4 border-t border-[var(--print-line)]">
+              <h5 className="text-sm font-black text-[var(--print-mint)]">What does it mean?</h5>
+              <div className="mt-3 print-panel-soft rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-4">
+                <div
+                  className="h-16 w-24 rounded-md flex flex-col items-center justify-center text-[10px] font-bold text-slate-900 shadow-inner border border-slate-800 shrink-0"
+                  style={{ background: heatmapColor((heatmapRange.min + heatmapRange.max) / 2) }}
+                >
+                  <div>1.4</div>
+                  <div className="text-[9px]">3.2</div>
+                  <div className="text-[9px]">(18)</div>
+                </div>
+                <div className="text-xs text-slate-300 leading-relaxed">
+                  <div><span className="text-[var(--print-mint-soft)] font-bold">Top number:</span> `log2(OR)`; higher means stronger enrichment for that TF-term pair.</div>
+                  <div><span className="text-[var(--print-mint-soft)] font-bold">Middle number:</span> `-log10(p)`; higher means stronger statistical support.</div>
+                  <div><span className="text-[var(--print-mint-soft)] font-bold">Bottom number:</span> overlap; the number of shared genes between TF targets and the selected GO term.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-[var(--print-line)]">
+              <h5 className="text-sm font-black text-[var(--print-mint)]">How was this computed?</h5>
+              <div className="mt-3 print-panel-soft rounded-2xl p-4 text-xs text-slate-300 leading-relaxed">
+                For each transcription factor, the app collects its target genes after applying the selected evidence filters. That target set is then compared against the genes annotated for each biological process using a one-sided Fisher exact test, with the Araport11 gene set as background universe. The heatmap summarizes three values per TF-process pair: enrichment strength as `log2(odds ratio)`, statistical support as `-log10(p-value)`, and the observed gene overlap.
+              </div>
+            </div>
           </div>
         )}
       </div>
