@@ -34,8 +34,8 @@ export default function PathwaySelector({ onPathwayChange, defaultPathwayId = 'h
     }, []);
 
     return (
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-4 mb-2">
-            <h3 className="m-0 mb-2 text-white text-sm font-bold">
+        <div className="print-panel rounded-2xl p-4 mb-2">
+            <h3 className="m-0 mb-2 text-[var(--print-mint)] text-sm font-bold">
                 Pathway View
             </h3>
 
@@ -43,7 +43,7 @@ export default function PathwaySelector({ onPathwayChange, defaultPathwayId = 'h
                 value={selectedPathway}
                 onChange={(e) => handlePathwayChange(e.target.value)}
                 disabled={loading}
-                className="w-full px-3 py-2 bg-slate-800/60 text-slate-100 border border-slate-600 rounded-lg text-sm disabled:cursor-wait"
+                className="w-full px-3 py-2 bg-black/10 text-slate-100 border border-[var(--print-line)] rounded-lg text-sm disabled:cursor-wait"
             >
                 {availablePathways.map(pathway => (
                     <option key={pathway.id} value={pathway.id}>
@@ -53,13 +53,13 @@ export default function PathwaySelector({ onPathwayChange, defaultPathwayId = 'h
             </select>
 
             {loading && (
-                <div className="mt-2 text-slate-400 text-xs text-center">
+                <div className="mt-2 text-[var(--print-fog)] text-xs text-center">
                     Loading pathway data...
                 </div>
             )}
 
             {selectedPathway && !loading && (
-                <div className="mt-2 px-2 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-[11px] text-emerald-300">
+                <div className="mt-2 px-2 py-1.5 bg-[rgba(77,231,191,0.1)] border border-[rgba(77,231,191,0.28)] rounded-md text-[11px] text-[var(--print-mint-soft)]">
                     <div>Pathway loaded successfully</div>
                 </div>
             )}

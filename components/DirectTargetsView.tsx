@@ -75,15 +75,15 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
 
     // Color scheme for biological processes
     const PROCESS_COLORS: Record<string, string> = {
-        'ABA Response': '#3b82f6',
-        'Water Deprivation': '#0ea5e9',
-        'Osmotic Stress': '#06b6d4',
-        'Auxin Signaling': '#10b981',
-        'Ethylene Response': '#f59e0b',
-        'Jasmonic Acid': '#ef4444',
-        'Cytokinin': '#8b5cf6',
-        'Gibberellin': '#ec4899',
-        'Other': '#64748b'
+        'ABA Response': '#69d7cf',
+        'Water Deprivation': '#4de7bf',
+        'Osmotic Stress': '#78f0d3',
+        'Auxin Signaling': '#d7aa63',
+        'Ethylene Response': '#d97777',
+        'Jasmonic Acid': '#c46868',
+        'Cytokinin': '#8ca7a0',
+        'Gibberellin': '#9bb7b0',
+        'Other': '#6c8580'
     };
 
     useEffect(() => {
@@ -120,8 +120,8 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
 
         tfNode.append('path')
             .attr('d', d3.symbol().type(d3.symbolTriangle).size(400)())
-            .attr('fill', '#10b981')
-            .attr('stroke', '#059669')
+            .attr('fill', '#4de7bf')
+            .attr('stroke', '#2f7f76')
             .attr('stroke-width', 3);
 
         if (showLabels) {
@@ -129,7 +129,7 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                 .text(selectedTF)
                 .attr('y', -25)
                 .attr('text-anchor', 'middle')
-                .attr('fill', '#10b981')
+                .attr('fill', '#4de7bf')
                 .attr('font-size', '16px')
                 .attr('font-weight', 'bold');
         }
@@ -183,17 +183,17 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                 targetNode.append('circle')
                     .attr('r', 8)
                     .attr('fill', color)
-                    .attr('stroke', '#1e293b')
+                    .attr('stroke', '#132026')
                     .attr('stroke-width', 2);
 
                 // Evidence badge
-                const evidenceColor = target.evidence === 3 ? '#059669' : target.evidence === 2 ? '#10b981' : '#64748b';
+                const evidenceColor = target.evidence === 3 ? '#d7aa63' : target.evidence === 2 ? '#4de7bf' : '#6c8580';
                 targetNode.append('circle')
                     .attr('cx', 12)
                     .attr('cy', -8)
                     .attr('r', 6)
                     .attr('fill', evidenceColor)
-                    .attr('stroke', '#1e293b')
+                    .attr('stroke', '#132026')
                     .attr('stroke-width', 1);
 
                 targetNode.append('text')
@@ -230,18 +230,18 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
     }, [selectedTF, targets, groupedTargets, showLabels, minEvidence]);
 
     return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl shadow-2xl border border-slate-700 flex flex-col overflow-hidden h-[800px] relative">
+        <div className="print-panel rounded-3xl flex flex-col overflow-hidden h-[800px] relative">
             {/* Header */}
-            <div className="p-6 border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between">
+            <div className="p-6 border-b border-[var(--print-line)] bg-black/10 backdrop-blur-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <div className="print-logo-frame w-10 h-10 rounded-xl flex items-center justify-center">
                         <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                     </div>
                     <div>
                         <h3 className="text-xl font-bold text-white tracking-tight">Direct Targets View</h3>
-                        <p className="text-sm text-emerald-400 font-medium">TF → Target Genes (GO Grouped)</p>
+                        <p className="text-sm text-[var(--print-mint)] font-medium">TF → Target Genes (GO Grouped)</p>
                     </div>
                 </div>
 
@@ -250,7 +250,7 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                     <select
                         value={selectedTF}
                         onChange={(e) => onTFChange(e.target.value)}
-                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-sm font-bold text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="px-4 py-2 bg-black/10 border border-[var(--print-line)] rounded-xl text-sm font-bold text-[var(--print-mint)] outline-none focus:ring-2 focus:ring-[var(--print-mint)]"
                     >
                         <option value="">Select TF...</option>
                         {availableTFs.map(tf => (
@@ -261,12 +261,12 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                     {/* Source Filters with AND/OR toggle */}
                     <div className="flex items-center gap-2">
                         {/* AND/OR Toggle */}
-                        <div className="flex items-center bg-slate-800/50 border border-slate-700 rounded-xl p-1">
+                        <div className="flex items-center bg-black/10 border border-[var(--print-line)] rounded-xl p-1">
                             <button
                                 onClick={() => setSourceFilterMode('OR')}
                                 className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
                                     sourceFilterMode === 'OR'
-                                        ? 'bg-cyan-500 text-white shadow-lg'
+                                        ? 'bg-[#69d7cf] text-[var(--print-ink)] shadow-lg'
                                         : 'text-slate-400 hover:text-slate-300'
                                 }`}
                                 title="Show genes regulated by ANY selected source"
@@ -277,7 +277,7 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                                 onClick={() => setSourceFilterMode('AND')}
                                 className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
                                     sourceFilterMode === 'AND'
-                                        ? 'bg-orange-500 text-white shadow-lg'
+                                        ? 'bg-[#d7aa63] text-[var(--print-ink)] shadow-lg'
                                         : 'text-slate-400 hover:text-slate-300'
                                 }`}
                                 title="Show genes regulated by ALL selected sources"
@@ -287,7 +287,7 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                         </div>
 
                         {/* Source Selection Buttons */}
-                        <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-xl px-3 py-2">
+                        <div className="flex items-center gap-2 bg-black/10 border border-[var(--print-line)] rounded-xl px-3 py-2">
                             {['TARGET', 'DAP', 'CHIP'].map(source => (
                                 <button
                                     key={source}
@@ -301,11 +301,11 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                                     className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
                                         selectedSources.includes(source)
                                             ? source === 'TARGET'
-                                                ? 'bg-emerald-500 text-white'
+                                                ? 'bg-[var(--print-mint)] text-[var(--print-ink)]'
                                                 : source === 'DAP'
-                                                ? 'bg-blue-500 text-white'
-                                                : 'bg-violet-500 text-white'
-                                            : 'bg-slate-700 text-slate-400'
+                                                ? 'bg-[#d7aa63] text-[var(--print-ink)]'
+                                                : 'bg-[#69d7cf] text-[var(--print-ink)]'
+                                            : 'bg-white/5 text-slate-400'
                                     }`}
                                 >
                                     {source}
@@ -318,7 +318,7 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                     <select
                         value={minEvidence}
                         onChange={(e) => setMinEvidence(+e.target.value)}
-                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-sm font-bold text-teal-400 outline-none focus:ring-2 focus:ring-teal-500"
+                        className="px-4 py-2 bg-black/10 border border-[var(--print-line)] rounded-xl text-sm font-bold text-[#69d7cf] outline-none focus:ring-2 focus:ring-[#69d7cf]"
                     >
                         <option value={1}>≥1 source</option>
                         <option value={2}>≥2 sources</option>
@@ -329,8 +329,8 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
                     <button
                         onClick={() => setShowLabels(!showLabels)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showLabels
-                                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 border'
-                                : 'bg-slate-800 border-slate-700 text-slate-400 border'
+                                ? 'bg-[rgba(77,231,191,0.12)] border-[rgba(77,231,191,0.28)] text-[var(--print-mint)] border'
+                                : 'bg-black/10 border-[var(--print-line)] text-slate-400 border'
                             }`}
                     >
                         {showLabels ? 'Hide Labels' : 'Show Labels'}
@@ -339,10 +339,10 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
             </div>
 
             {/* Visualization */}
-            <div className="flex-1 relative bg-slate-950/50 overflow-hidden">
+            <div className="flex-1 relative bg-black/10 overflow-hidden">
                 {/* Instructions */}
-                <div className="absolute top-6 left-6 p-4 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl z-10 shadow-2xl">
-                    <div className="text-xs font-bold text-emerald-400 mb-2">Controls</div>
+                <div className="absolute top-6 left-6 p-4 bg-[rgba(27,40,46,0.86)] backdrop-blur-md border border-[var(--print-line)] rounded-2xl z-10 shadow-2xl">
+                    <div className="text-xs font-bold text-[var(--print-mint)] mb-2">Controls</div>
                     <div className="text-xs text-slate-300 space-y-1">
                         <div>• Scroll to zoom</div>
                         <div>• Drag to pan</div>
@@ -352,14 +352,14 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
 
                 {/* Stats */}
                 {selectedTF && (
-                    <div className="absolute top-6 right-6 p-4 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl">
+                    <div className="absolute top-6 right-6 p-4 bg-[rgba(27,40,46,0.86)] backdrop-blur-md border border-[var(--print-line)] rounded-2xl shadow-2xl">
                         <div className="grid grid-cols-2 gap-4 text-center">
                             <div>
-                                <div className="text-2xl font-black text-emerald-400">{targets.length}</div>
+                                <div className="text-2xl font-black text-[var(--print-mint)]">{targets.length}</div>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase">Targets</div>
                             </div>
                             <div>
-                                <div className="text-2xl font-black text-teal-400">{Object.keys(groupedTargets).length}</div>
+                                <div className="text-2xl font-black text-[#d7aa63]">{Object.keys(groupedTargets).length}</div>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase">Groups</div>
                             </div>
                         </div>

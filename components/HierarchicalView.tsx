@@ -76,7 +76,7 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
             if (process.includes('GIBBERELLIN') || process.includes('gibberellin')) return '#ec4899';
         }
 
-        return '#64748b'; // Default gray
+        return '#6c8580';
     };
 
     useEffect(() => {
@@ -275,18 +275,18 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
     }, [selectedTF, hierarchy, showDownstreamTargets, showLabels, tfNetwork, pathwayMapping]);
 
     return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl shadow-2xl border border-slate-700 flex flex-col overflow-hidden h-[800px] relative">
+        <div className="print-panel rounded-3xl flex flex-col overflow-hidden h-[800px] relative">
             {/* Header */}
-            <div className="p-6 border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between">
+            <div className="p-6 border-b border-[var(--print-line)] bg-black/10 backdrop-blur-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <div className="print-logo-frame w-10 h-10 rounded-xl flex items-center justify-center">
                         <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                         </svg>
                     </div>
                     <div>
                         <h3 className="text-xl font-bold text-white tracking-tight">Hierarchical View</h3>
-                        <p className="text-sm text-emerald-400 font-medium">TF Regulatory Cascade</p>
+                        <p className="text-sm text-[var(--print-mint)] font-medium">TF Regulatory Cascade</p>
                     </div>
                 </div>
 
@@ -295,7 +295,7 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                     <select
                         value={selectedTF}
                         onChange={(e) => onTFChange(e.target.value)}
-                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-sm font-bold text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="px-4 py-2 bg-black/10 border border-[var(--print-line)] rounded-xl text-sm font-bold text-[var(--print-mint)] outline-none focus:ring-2 focus:ring-[var(--print-mint)]"
                     >
                         <option value="">Select TF...</option>
                         {availableTFs.map(tf => (
@@ -307,8 +307,8 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                     <button
                         onClick={() => setShowDownstreamTargets(!showDownstreamTargets)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showDownstreamTargets
-                            ? 'bg-teal-500/20 border-teal-500/30 text-teal-400 border'
-                            : 'bg-slate-800 border-slate-700 text-slate-400 border'
+                            ? 'bg-[rgba(105,215,207,0.12)] border-[rgba(105,215,207,0.28)] text-[#69d7cf] border'
+                            : 'bg-black/10 border-[var(--print-line)] text-slate-400 border'
                             }`}
                     >
                         {showDownstreamTargets ? 'Hide Targets' : 'Show Targets'}
@@ -318,8 +318,8 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                     <button
                         onClick={() => setShowLabels(!showLabels)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showLabels
-                            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 border'
-                            : 'bg-slate-800 border-slate-700 text-slate-400 border'
+                            ? 'bg-[rgba(77,231,191,0.12)] border-[rgba(77,231,191,0.28)] text-[var(--print-mint)] border'
+                            : 'bg-black/10 border-[var(--print-line)] text-slate-400 border'
                             }`}
                     >
                         {showLabels ? 'Hide Labels' : 'Show Labels'}
@@ -328,25 +328,25 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
             </div>
 
             {/* Visualization */}
-            <div className="flex-1 relative bg-slate-950/50 overflow-hidden">
+            <div className="flex-1 relative bg-black/10 overflow-hidden">
                 {/* Legend */}
-                <div className="absolute top-6 left-6 p-4 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl z-10 shadow-2xl">
-                    <div className="text-xs font-bold text-emerald-400 mb-3">Hierarchy</div>
+                <div className="absolute top-6 left-6 p-4 bg-[rgba(27,40,46,0.86)] backdrop-blur-md border border-[var(--print-line)] rounded-2xl z-10 shadow-2xl">
+                    <div className="text-xs font-bold text-[var(--print-mint)] mb-3">Hierarchy</div>
                     <div className="text-xs text-slate-300 space-y-2">
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-slate-600" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+                            <div className="w-4 h-4 bg-[#6c8580]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
                             <span>Level -1 (Upstream)</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-5 h-5 bg-emerald-500" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+                            <div className="w-5 h-5 bg-[var(--print-mint)]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
                             <span>Level 0 (Selected)</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-slate-600" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+                            <div className="w-4 h-4 bg-[#69d7cf]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
                             <span>Level +1 (Downstream)</span>
                         </div>
                     </div>
-                    <div className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-700">
+                    <div className="text-xs text-slate-400 mt-3 pt-3 border-t border-[var(--print-line)]">
                         <div>• Scroll to zoom</div>
                         <div>• Drag to pan</div>
                         <div>• Double-click to reset</div>
@@ -355,14 +355,14 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
 
                 {/* Stats */}
                 {selectedTF && hierarchy && (
-                    <div className="absolute top-6 right-6 p-4 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl">
+                    <div className="absolute top-6 right-6 p-4 bg-[rgba(27,40,46,0.86)] backdrop-blur-md border border-[var(--print-line)] rounded-2xl shadow-2xl">
                         <div className="grid grid-cols-2 gap-4 text-center">
                             <div>
-                                <div className="text-2xl font-black text-blue-400">{hierarchy.upstream.length}</div>
+                                <div className="text-2xl font-black text-[#d7aa63]">{hierarchy.upstream.length}</div>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase">Upstream</div>
                             </div>
                             <div>
-                                <div className="text-2xl font-black text-teal-400">{hierarchy.downstream.length}</div>
+                                <div className="text-2xl font-black text-[#69d7cf]">{hierarchy.downstream.length}</div>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase">Downstream</div>
                             </div>
                         </div>

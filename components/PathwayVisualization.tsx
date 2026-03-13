@@ -441,18 +441,18 @@ export default function PathwayVisualization({ pathwayData, regulatoryData, gene
     };
 
     return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl shadow-2xl border border-slate-700 flex flex-col overflow-hidden h-[800px] relative">
+        <div className="print-panel rounded-3xl flex flex-col overflow-hidden h-[800px] relative">
             {/* Header */}
-            <div className="p-6 border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between">
+            <div className="p-6 border-b border-[var(--print-line)] bg-black/10 backdrop-blur-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <div className="print-logo-frame w-10 h-10 rounded-xl flex items-center justify-center">
                         <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                         </svg>
                     </div>
                     <div>
                         <h3 className="text-xl font-bold text-white tracking-tight">{pathwayData.name}</h3>
-                        <p className="text-sm text-emerald-400 font-medium">KEGG Pathway Visualization</p>
+                        <p className="text-sm text-[var(--print-mint)] font-medium">KEGG Pathway Visualization</p>
                     </div>
                 </div>
 
@@ -461,7 +461,7 @@ export default function PathwayVisualization({ pathwayData, regulatoryData, gene
                     <select
                         value={selectedTF}
                         onChange={(e) => setSelectedTF(e.target.value)}
-                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-sm font-bold text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="px-4 py-2 bg-black/10 border border-[var(--print-line)] rounded-xl text-sm font-bold text-[var(--print-mint)] outline-none focus:ring-2 focus:ring-[var(--print-mint)]"
                     >
                         <option value="all">All TFs</option>
                         {availableTFs.filter(tf => tf !== 'all').map(tf => (

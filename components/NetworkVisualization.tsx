@@ -31,12 +31,12 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
     return (
         <div className="space-y-6">
             {/* View Selector */}
-            <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-700 p-2 flex items-center gap-2 w-fit shadow-lg">
+            <div className="print-panel rounded-2xl p-2 flex items-center gap-2 w-fit">
                 <button
                     onClick={() => handleViewChange('direct')}
                     className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${view === 'direct'
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
-                            : 'text-slate-400 hover:bg-slate-800'
+                            ? 'print-button'
+                            : 'text-slate-400 hover:bg-white/5'
                         }`}
                 >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,8 +48,8 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                 <button
                     onClick={() => handleViewChange('hierarchical')}
                     className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${view === 'hierarchical'
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
-                            : 'text-slate-400 hover:bg-slate-800'
+                            ? 'print-button'
+                            : 'text-slate-400 hover:bg-white/5'
                         }`}
                 >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -61,8 +61,8 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                 <button
                     onClick={() => handleViewChange('pathway')}
                     className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${view === 'pathway'
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
-                            : 'text-slate-400 hover:bg-slate-800'
+                            ? 'print-button'
+                            : 'text-slate-400 hover:bg-white/5'
                         }`}
                 >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
