@@ -216,11 +216,11 @@ export default function Landing({ onEnter }: LandingProps) {
               rel="noreferrer"
               className="rounded-2xl px-4 py-2 flex items-center justify-center overflow-hidden transition-all hover:border-[var(--print-line-strong)] hover:bg-white/5 border border-[rgba(119,167,159,0.28)] bg-[linear-gradient(180deg,rgba(78,112,121,0.9),rgba(55,81,89,0.9))]"
             >
-              <div className="h-12 w-24 md:h-14 md:w-28 flex items-center justify-center shrink-0">
+              <div className="h-14 w-28 md:h-16 md:w-32 flex items-center justify-center shrink-0">
                 <img
                   src="/logos/2025 - Logo PhytoLearning sin fondo (1).png"
                   alt="PhytoLearning"
-                  className="max-h-full max-w-full object-contain opacity-90 scale-[2.5] origin-center"
+                  className="h-full w-full object-contain opacity-90"
                 />
               </div>
             </a>
