@@ -1,136 +1,103 @@
 # PRINT (Plant Regulatory Information Network Tool)
 
-<div align="center">
-  <h3>PRINT (Plant Regulatory Information Network Tool)</h3>
-  <p>PRINT is a web-based tool for the integration, filtering, and visualization of plant gene regulatory networks using functional annotations and curated regulatory interaction datasets.</p>
-</div>
+PRINT is a React + TypeScript web tool for integrating and exploring plant gene regulatory interactions with pathway and GO annotations.
 
----
+## Project Overview
 
-## 🧬 Description (Overview)
+The application integrates three interaction evidence sources:
 
-PRINT (Plant Regulatory Information Network Tool) is a computational tool developed by the **Plant Genome Regulation Lab (Núcleo Milenio PhytoLearning)** to explore plant gene regulatory networks through the integration of multiple sources of regulatory evidence.
+- `TARGET`
+- `CHIP`
+- `DAP`
 
-The tool enables users to filter and visualize gene regulatory networks based on functional annotations, with a particular focus on stress- and hormone-related biological processes. Regulatory interactions are integrated from curated databases such as ConnectTF, together with inferred gene regulatory networks and Gene Ontology annotations.
+And enriches those interactions with:
 
-The primary goal of the tool is to support hypothesis-driven exploration of transcriptional regulation in plant genomes by allowing users to focus on biologically relevant subnetworks.
+- Gene ID to symbol mapping
+- Process annotations
+- GO annotations
 
-## 🔗 Data sources
+The frontend can load data from:
 
-The current implementation integrates:
+- Supabase tables (preferred for production)
+- Static files in `public/data/` (fallback)
 
-*   **Gene Ontology annotations**
-    *   Source: Gene Ontology Consortium (GAF format, release 26/01)
-    *   File example: `GO.allframe.ATH.26012026.tsv`
+## Quick Start
 
-*   **Regulatory interaction datasets**
-    *   Curated TF–target interactions from ConnectTF
-    *   Inferred gene regulatory networks (GRNs)
+Requirements:
 
-## 🧪 Functional focus
+- Node.js 18+
 
-The tool is optimized for the exploration of regulatory networks associated with key biological processes, including:
+Install and run:
 
-*   `GO:0009414` — water deprivation
-*   `GO:0009737` — response to abscisic acid (ABA)
-*   `GO:0009738` — ABA-activated signaling pathway
-*   `GO:0006970` — response to osmotic stress
-*   `GO:0009733` — response to auxin
+```bash
+npm install
+npm run dev
+```
 
-Special emphasis is placed on the analysis of transcription factors prioritized by the lab, including:
+Build check:
 
-**NLP7, TGA1, HB7, ABF2, GBF3, and MYB44**
+```bash
+npm run build
+```
 
-## 🧠 Core features
+## Data Layout
 
-*   Integration of heterogeneous regulatory interaction datasets
-*   GO-based filtering of nodes and edges in gene regulatory networks
-*   Interactive visualization of regulatory subnetworks
-*   Focused exploration of transcription factor–centered networks
-*   Reproducible and extensible design for additional annotations and datasets
+Static dataset files (fallback mode):
 
-## 🛠️ Usage
+- `public/data/target.tsv`
+- `public/data/chip.tsv`
+- `public/data/dap.part01.tsv` ... `public/data/dap.partNN.tsv`
+- `public/data/mapping.tsv`
+- `public/data/process.txt`
+- `public/data/go_annotations.tsv`
 
-### Prerequisites
-*   Node.js v16+ (or v18+ recommended)
-*   **Note**: If using **WSL**, ensure you are running in the WSL environment.
+Raw files too large for static hosting are kept outside deploy assets:
 
-### Setup & Run
-1.  Clone the repository.
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Launch the platform:
-    ```bash
-    npm run dev
-    ```
-    Access the app at `http://localhost:3000`.
+- `docs/raw_data/`
 
-## 📂 Data Architecture
+## Supabase Mode
 
-Data files are served statically from `public/data/` and ingested by the `DataService` on client-load:
-*   `dap.tsv`, `chip.tsv`, `target.tsv`: Interaction networks.
-*   `mapping.tsv`: ID -> Symbol conversion.
-*   `process.txt`: Gene -> Process annotations.
+Set these variables in `.env.local` or your deployment environment:
 
----
+```bash
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-jwt>
 
-*PRINT is designed for rapid hypothesis generation in plant systems biology.*
-# Workflow Oficial de Colaboración (Git)
+# Optional table names (defaults shown)
+VITE_SUPABASE_INTERACTIONS_TABLE=print_interactions
+VITE_SUPABASE_MAPPING_TABLE=print_gene_mapping
+VITE_SUPABASE_PROCESS_TABLE=print_process_annotations
+VITE_SUPABASE_GO_TABLE=print_go_annotations
+```
 
-## Flujo con rama `dev` (recomendado)
-**Resumen:** todo se integra primero en `dev`, y solo lo estable pasa a `main`.
+Canonical DB setup and import guide:
 
-### Crear `dev` (una sola vez, por un mantenedor)
-1. `git checkout main`
-2. `git pull origin main`
-3. `git checkout -b dev`
-4. `git push origin dev`
+- `docs/supabase/README.md`
 
-### Trabajar en una feature
-1. `git checkout dev`
-2. `git pull origin dev`
-3. `git checkout -b feature/tu-cambio`
-4. Hacer cambios y probar.
-5. `git add -A`
-6. `git commit -m "feat: describe tu cambio"`
-7. `git push origin feature/tu-cambio`
-8. Abrir PR **hacia `dev`**.
+## Important Docs
 
-### Integrar a `main`
-1. Crear PR **de `dev` a `main`** cuando el sprint esté estable.
-2. Mergear solo si pasa CI y tiene review.
+- `docs/supabase/README.md`: full SQL + import runbook
+- `docs/REGLAS_DISENO_PRINT.md`: design rules
+- `scripts/prepareSupabaseCsv.mjs`: generates CSVs for manual Supabase upload
+- `scripts/wipeSupabaseTables.mjs`: wipes target Supabase tables
 
-## Antes de empezar a trabajar
-1. `git checkout main`
-2. `git pull origin main`
-3. `git checkout -b feature/tu-cambio` (o usa tu rama existente)
+## Pre-Push Checklist
 
-## Durante el trabajo
-1. Hacer cambios y probar.
-2. `git add -A`
-3. `git commit -m "feat: describe tu cambio"`
+Run before opening PR:
 
-## Antes de abrir PR / enviar cambios
-1. `git checkout main`
-2. `git pull origin main`
-3. `git checkout feature/tu-cambio`
-4. `git merge main`  
-   - Alternativa con historial limpio: `git rebase main`
-5. Resolver conflictos si aparecen y volver a hacer commit.
+```bash
+npm run build
+git status
+```
 
-## Publicar la rama
-1. `git push origin feature/tu-cambio`
+Ensure you do not commit generated artifacts:
 
-## Reglas rápidas
-- No subir `node_modules` ni `dist` (ya están en `.gitignore`).
-- Siempre actualizar `main` antes de trabajar.
-- PR obligatorio para `main` y `dev`.
+- `upload/`
+- `supabase/.temp/`
+- local `.env*`
 
-## Reglas formales (GitHub)
-- **Protección de ramas:** bloquear pushes directos a `main` y `dev`.
-- **Reviews:** mínimo 1 aprobación por PR (2 si es cambio grande).
-- **CI obligatorio:** `npm install` + `npm run build` en PRs.
-- **Checks requeridos:** no permitir merge si falla CI.
-- **Dependabot/Renovate:** actualizaciones automáticas de dependencias.
+## Git Workflow (Suggested)
+
+- Work from `dev` using `feature/*` branches.
+- Open PRs to `dev` first.
+- Merge `dev` to `main` only when stable.

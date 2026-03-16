@@ -20,6 +20,10 @@ Thumbs.db
 .env
 .env.*
 
+# Supabase local metadata and generated import artifacts
+supabase/.temp/
+upload/
+
 # Coverage
 coverage/
 
