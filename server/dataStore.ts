@@ -25,6 +25,39 @@ let cached: IntegratedDataset | null = null;
 
 const dataPath = (...parts: string[]) => path.join(process.cwd(), 'public', 'data', ...parts);
 
+const readIfExists = async (fileName: string): Promise<string> => {
+  try {
+    return await fs.readFile(dataPath(fileName), 'utf8');
+  } catch {
+    return '';
+  }
+};
+
+const loadDataText = async (baseName: string): Promise<string> => {
+  const single = await readIfExists(baseName);
+  if (single) return single;
+
+  const partTexts: string[] = [];
+  for (let idx = 1; idx <= 99; idx += 1) {
+    const suffix = String(idx).padStart(2, '0');
+    const partName = baseName.replace('.tsv', `.part${suffix}.tsv`);
+    const part = await readIfExists(partName);
+    if (!part) break;
+    partTexts.push(part);
+  }
+
+  if (partTexts.length === 0) return '';
+
+  // Remove repeated headers from split parts before merging.
+  return partTexts
+    .map((text, idx) => {
+      if (idx === 0) return text;
+      const lines = text.split(/\r?\n/);
+      return lines.slice(1).join('\n');
+    })
+    .join('\n');
+};
+
 const parseTSV = (text: string, source: 'TARGET' | 'DAP' | 'CHIP'): RawInteraction[] => {
   const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
   if (lines.length < 2) return [];
@@ -108,12 +141,12 @@ export async function getDataset(): Promise<IntegratedDataset> {
   if (cached) return cached;
 
   const [dapText, chipText, targetText, mapText, procText, goText] = await Promise.all([
-    fs.readFile(dataPath('dap.tsv'), 'utf8'),
-    fs.readFile(dataPath('chip.tsv'), 'utf8'),
-    fs.readFile(dataPath('target.tsv'), 'utf8'),
-    fs.readFile(dataPath('mapping.tsv'), 'utf8'),
-    fs.readFile(dataPath('process.txt'), 'utf8'),
-    fs.readFile(dataPath('go_annotations.tsv'), 'utf8')
+    loadDataText('dap.tsv'),
+    loadDataText('chip.tsv'),
+    loadDataText('target.tsv'),
+    loadDataText('mapping.tsv'),
+    loadDataText('process.txt'),
+    loadDataText('go_annotations.tsv')
   ]);
 
   const dapData = parseTSV(dapText, 'DAP');
