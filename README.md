@@ -94,6 +94,8 @@ Ensure you do not commit generated artifacts:
 
 - `upload/`
 - `supabase/.temp/`
+
+For Cloudflare Pages, verify the project is deploying the latest commit on `main` and the output directory is `dist`.
 - local `.env*`
 
 ## Git Workflow (Suggested)
