@@ -23,11 +23,12 @@ export interface IntegratedDataset {
 interface SupabaseConfig {
   url: string;
   anonKey: string;
-    initialRows: number;
+  initialRows: number;
   tables: {
     integrated?: string;
     stats?: string;
     tfOptions?: string;
+    enrichmentTargets?: string;
     interactions: string;
     mapping: string;
     process: string;
@@ -73,6 +74,16 @@ interface SupabaseStatsRow {
   unique_targets: number | string;
 }
 
+interface SupabaseTfTargetSetRow {
+  tf: string;
+  target_ids: string[] | null;
+}
+
+interface SupabaseEnrichmentTargetRow extends SupabaseTfTargetSetRow {
+  min_evidence: number | string;
+  source_key: string;
+}
+
 export interface ExplorePageResult {
   rows: IntegratedInteraction[];
   total: number;
@@ -109,6 +120,7 @@ const getSupabaseConfig = (): SupabaseConfig | null => {
       integrated: (import.meta.env.VITE_SUPABASE_INTEGRATED_VIEW || '').trim() || undefined,
       stats: (import.meta.env.VITE_SUPABASE_STATS_VIEW || '').trim() || undefined,
       tfOptions: (import.meta.env.VITE_SUPABASE_TF_OPTIONS_VIEW || '').trim() || undefined,
+      enrichmentTargets: (import.meta.env.VITE_SUPABASE_ENRICHMENT_VIEW || '').trim() || undefined,
       interactions: (import.meta.env.VITE_SUPABASE_INTERACTIONS_TABLE || 'print_interactions').trim(),
       mapping: (import.meta.env.VITE_SUPABASE_MAPPING_TABLE || 'print_gene_mapping').trim(),
       process: (import.meta.env.VITE_SUPABASE_PROCESS_TABLE || 'print_process_annotations').trim(),
@@ -336,6 +348,20 @@ const buildExploreQuery = (params: ExploreQueryParams): URLSearchParams => {
   return query;
 };
 
+const normalizeSourceList = (sources?: string[]): string[] => {
+  const normalized = (sources || VALID_SOURCES)
+    .map((source) => String(source || '').trim().toUpperCase())
+    .filter((source): source is typeof VALID_SOURCES[number] => VALID_SOURCES.includes(source as any));
+
+  return Array.from(new Set(normalized));
+};
+
+const getSourceFilterKey = (sources?: string[]): string => {
+  const normalized = normalizeSourceList(sources);
+  const ordered = VALID_SOURCES.filter((source) => normalized.includes(source));
+  return ordered.join('|');
+};
+
 const mapExploreRows = (rows: SupabaseIntegratedRow[]): IntegratedInteraction[] => {
   return rows
     .map((row) => {
@@ -438,6 +464,93 @@ export const fetchSupabaseExploreAll = async (
   }
 
   return allRows;
+};
+
+export const fetchSupabaseTfTargetSets = async (params: {
+  minConfidence?: number;
+  selectedSources?: string[];
+}): Promise<Map<string, Set<string>> | null> => {
+  const config = getSupabaseConfig();
+  if (!config) return null;
+
+  const minEvidence = Math.max(1, Math.min(3, params.minConfidence || 1));
+  const sourceKey = getSourceFilterKey(params.selectedSources);
+
+  if (config.tables.enrichmentTargets) {
+    const allRows: SupabaseEnrichmentTargetRow[] = [];
+    const pageSize = 1000;
+    let from = 0;
+
+    for (;;) {
+      const to = from + pageSize - 1;
+      const url = `${config.url}/rest/v1/${config.tables.enrichmentTargets}?select=${encodeURIComponent('tf,target_ids,min_evidence,source_key')}&min_evidence=eq.${minEvidence}&source_key=eq.${encodeURIComponent(sourceKey)}&order=${encodeURIComponent('tf.asc')}`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${config.anonKey}`,
+          'Range-Unit': 'items',
+          Range: `${from}-${to}`
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Supabase enrichment view query failed: ${res.status}`);
+      }
+
+      const rows = (await res.json()) as SupabaseEnrichmentTargetRow[];
+      if (!Array.isArray(rows) || rows.length === 0) break;
+      allRows.push(...rows);
+      if (rows.length < pageSize) break;
+      from += rows.length;
+    }
+
+    const map = new Map<string, Set<string>>();
+    allRows.forEach((row) => {
+      const tf = (row.tf || '').trim();
+      if (!tf) return;
+      const ids = new Set(
+        (row.target_ids || [])
+          .map((id) => String(id || '').trim().toUpperCase())
+          .filter(Boolean)
+      );
+      map.set(tf, ids);
+    });
+
+    return map;
+  }
+
+  const res = await fetch(`${config.url}/rest/v1/rpc/print_tf_target_sets`, {
+    method: 'POST',
+    headers: {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${config.anonKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      min_evidence: minEvidence,
+      selected_sources: normalizeSourceList(params.selectedSources)
+    })
+  });
+
+  if (!res.ok) {
+    throw new Error(`Supabase enrichment RPC failed: ${res.status}`);
+  }
+
+  const rows = (await res.json()) as SupabaseTfTargetSetRow[];
+  const map = new Map<string, Set<string>>();
+
+  rows.forEach((row) => {
+    const tf = (row.tf || '').trim();
+    if (!tf) return;
+    const ids = new Set(
+      (row.target_ids || [])
+        .map((id) => String(id || '').trim().toUpperCase())
+        .filter(Boolean)
+    );
+    map.set(tf, ids);
+  });
+
+  return map;
 };
 
 const fetchSupabaseStats = async (config: SupabaseConfig): Promise<DatasetStats | undefined> => {

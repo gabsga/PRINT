@@ -7,9 +7,10 @@ interface PathwayVisualizationProps {
     pathwayData: PathwayData;
     regulatoryData?: IntegratedInteraction[];
     geneMapping?: Record<string, string>;
+    tfOptions?: string[];
 }
 
-export default function PathwayVisualization({ pathwayData, regulatoryData, geneMapping = {} }: PathwayVisualizationProps) {
+export default function PathwayVisualization({ pathwayData, regulatoryData, geneMapping = {}, tfOptions }: PathwayVisualizationProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [showLabels, setShowLabels] = useState(true);
     const [highlightRegulated, setHighlightRegulated] = useState(true);
@@ -20,9 +21,10 @@ export default function PathwayVisualization({ pathwayData, regulatoryData, gene
 
     // Get unique TFs for selector
     const availableTFs = useMemo(() => {
+        if (tfOptions && tfOptions.length > 0) return ['all', ...tfOptions.filter(tf => tf !== 'all')];
         if (!regulatoryData) return ['all'];
         return ['all', ...Array.from(new Set(regulatoryData.map(d => d.tf))).sort()];
-    }, [regulatoryData]);
+    }, [regulatoryData, tfOptions]);
 
     // Filter regulatory data based on selected TF and sources
     const filteredRegulatoryData = useMemo(() => {

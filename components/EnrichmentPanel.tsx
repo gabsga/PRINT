@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { IntegratedInteraction } from '../types';
 import { computeEnrichment, EnrichmentResult } from '../services/enrichment';
+import { fetchSupabaseTfTargetSets } from '../services/dataLoader';
 
 interface EnrichmentPanelProps {
   data: IntegratedInteraction[];
@@ -34,6 +35,8 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
   const [universe, setUniverse] = useState<Set<string> | null>(null);
   const [universeError, setUniverseError] = useState<string | null>(null);
   const [loadingUniverse, setLoadingUniverse] = useState(false);
+  const [remoteTfTargets, setRemoteTfTargets] = useState<Map<string, Set<string>> | null>(null);
+  const [loadingRemoteTfTargets, setLoadingRemoteTfTargets] = useState(false);
 
   const availableTerms = useMemo(() => {
     return GO_TERMS.map((term) => ({
@@ -87,6 +90,9 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
   }, []);
 
   const tfTargets = useMemo(() => {
+    if (remoteTfTargets && remoteTfTargets.size > 0) {
+      return remoteTfTargets;
+    }
     const map = new Map<string, Set<string>>();
     data.forEach((i) => {
       if (i.evidenceCount < evidenceThreshold) return;
@@ -99,7 +105,37 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
       map.set(tf, entry);
     });
     return map;
-  }, [data, evidenceThreshold, selectedSources]);
+  }, [data, evidenceThreshold, selectedSources, remoteTfTargets]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingRemoteTfTargets(true);
+
+    fetchSupabaseTfTargetSets({
+      minConfidence: evidenceThreshold,
+      selectedSources
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setRemoteTfTargets(result);
+        }
+      })
+      .catch((error) => {
+        console.warn('Remote enrichment source unavailable, using local sample.', error);
+        if (!cancelled) {
+          setRemoteTfTargets(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingRemoteTfTargets(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [evidenceThreshold, selectedSources.join('|')]);
 
   const termGenes = useMemo(() => {
     const map = new Map<string, Set<string>>();
@@ -254,7 +290,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
         <div className="mt-4 text-xs text-[var(--print-fog)] flex flex-wrap gap-4">
           <div>Universe: <span className="text-[var(--print-mint-soft)] font-bold">{loadingUniverse ? 'cargando...' : universeSize.toLocaleString()}</span></div>
           <div>GO genes: <span className="text-[#69d7cf] font-bold">{termGeneCount.toLocaleString()}</span></div>
-          <div>TFs evaluados: <span className="text-[#efc98e] font-bold">{tfTargets.size.toLocaleString()}</span></div>
+          <div>TFs evaluados: <span className="text-[#efc98e] font-bold">{loadingRemoteTfTargets ? 'cargando...' : tfTargets.size.toLocaleString()}</span></div>
           <div className="mt-2 text-[10px] text-[var(--print-fog)]">Fuente GO: TAIR (ATH_GO_GOSLIM.txt) obtenido el 03-02-2026.</div>
 </div>
 

@@ -65,6 +65,7 @@ VITE_SUPABASE_ANON_KEY=<anon-jwt>
 VITE_SUPABASE_INTEGRATED_VIEW=print_interactions_integrated_mat
 VITE_SUPABASE_STATS_VIEW=print_interaction_stats_mat
 VITE_SUPABASE_TF_OPTIONS_VIEW=print_tf_options_mat
+VITE_SUPABASE_ENRICHMENT_VIEW=print_tf_target_sets_mat
 VITE_SUPABASE_INITIAL_ROWS=10000
 
 # Optional table names (defaults shown)

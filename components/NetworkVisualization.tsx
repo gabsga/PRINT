@@ -159,6 +159,7 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                         pathwayData={pathwayData}
                         regulatoryData={data}
                         geneMapping={geneMapping || {}}
+                        tfOptions={tfOptions}
                     />
                 ) : (
                     <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl shadow-2xl border border-slate-700 flex items-center justify-center h-[800px]">

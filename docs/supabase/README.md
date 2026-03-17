@@ -15,6 +15,8 @@ This runbook creates and loads the PRINT database in Supabase using SQL Editor +
 9. `docs/supabase/07_integrated_materialized.sql`
 10. `docs/supabase/08_tf_options_materialized.sql`
 11. `docs/supabase/09_stats_materialized.sql`
+12. `docs/supabase/10_enrichment_rpc.sql`
+13. `docs/supabase/11_enrichment_target_sets_materialized.sql`
 
 ## 2) Import raw files into staging tables
 
@@ -47,6 +49,7 @@ VITE_SUPABASE_ANON_KEY=<anon-jwt>
 VITE_SUPABASE_INTEGRATED_VIEW=print_interactions_integrated_mat
 VITE_SUPABASE_STATS_VIEW=print_interaction_stats_mat
 VITE_SUPABASE_TF_OPTIONS_VIEW=print_tf_options_mat
+VITE_SUPABASE_ENRICHMENT_VIEW=print_tf_target_sets_mat
 VITE_SUPABASE_INITIAL_ROWS=10000
 VITE_SUPABASE_INTERACTIONS_TABLE=print_interactions
 VITE_SUPABASE_MAPPING_TABLE=print_gene_mapping
