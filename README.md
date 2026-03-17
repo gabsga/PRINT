@@ -62,6 +62,10 @@ Set these variables in `.env.local` or your deployment environment:
 ```bash
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-jwt>
+VITE_SUPABASE_INTEGRATED_VIEW=print_interactions_integrated_mat
+VITE_SUPABASE_STATS_VIEW=print_interaction_stats_mat
+VITE_SUPABASE_TF_OPTIONS_VIEW=print_tf_options_mat
+VITE_SUPABASE_INITIAL_ROWS=10000
 
 # Optional table names (defaults shown)
 VITE_SUPABASE_INTERACTIONS_TABLE=print_interactions

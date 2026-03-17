@@ -1,14 +1,16 @@
 
 import React from 'react';
 import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { IntegratedInteraction } from '../types';
+import { DatasetStats, IntegratedInteraction } from '../types';
 
 interface StatsPanelProps {
   data: IntegratedInteraction[];
+  totalInteractions?: number;
+  stats?: DatasetStats;
 }
 
-const StatsPanel: React.FC<StatsPanelProps> = ({ data }) => {
-  const sourceCounts = [
+const StatsPanel: React.FC<StatsPanelProps> = ({ data, totalInteractions, stats }) => {
+  const sourceCounts = stats?.sourceCounts || [
     { name: 'TARGET', count: data.filter(i => i.sources.includes('TARGET')).length },
     { name: 'DAP', count: data.filter(i => i.sources.includes('DAP')).length },
     { name: 'CHIP', count: data.filter(i => i.sources.includes('CHIP')).length },
@@ -48,24 +50,24 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ data }) => {
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-[rgba(77,231,191,0.08)] border border-[rgba(77,231,191,0.2)] rounded-2xl">
             <p className="text-sm text-[var(--print-mint)] font-bold">Total Interactions</p>
-            <p className="text-3xl font-black text-[var(--print-mint-soft)] mt-1">{data.length}</p>
+            <p className="text-3xl font-black text-[var(--print-mint-soft)] mt-1">{totalInteractions || data.length}</p>
           </div>
           <div className="p-4 bg-[rgba(105,215,207,0.08)] border border-[rgba(105,215,207,0.2)] rounded-2xl">
             <p className="text-sm text-[#69d7cf] font-bold">High Confidence (3+)</p>
             <p className="text-3xl font-black text-[#90e6df] mt-1">
-              {data.filter(i => i.evidenceCount === 3).length}
+              {stats?.highConfidence3 ?? data.filter(i => i.evidenceCount === 3).length}
             </p>
           </div>
           <div className="p-4 bg-[rgba(215,170,99,0.08)] border border-[rgba(215,170,99,0.22)] rounded-2xl">
             <p className="text-sm text-[#d7aa63] font-bold">Unique TFs</p>
             <p className="text-3xl font-black text-[#efc98e] mt-1">
-              {new Set(data.map(i => i.tf)).size}
+              {stats?.uniqueTFs ?? new Set(data.map(i => i.tf)).size}
             </p>
           </div>
           <div className="p-4 bg-white/5 border border-[var(--print-line)] rounded-2xl">
             <p className="text-sm text-[var(--print-fog)] font-bold">Unique Targets</p>
             <p className="text-3xl font-black text-slate-100 mt-1">
-              {new Set(data.map(i => i.target)).size}
+              {stats?.uniqueTargets ?? new Set(data.map(i => i.target)).size}
             </p>
           </div>
         </div>

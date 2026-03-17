@@ -7,9 +7,10 @@ interface DirectTargetsViewProps {
     pathwayMapping: PathwayMapping;
     selectedTF: string;
     onTFChange: (tf: string) => void;
+    tfOptions?: string[];
 }
 
-export default function DirectTargetsView({ data, pathwayMapping, selectedTF, onTFChange }: DirectTargetsViewProps) {
+export default function DirectTargetsView({ data, pathwayMapping, selectedTF, onTFChange, tfOptions }: DirectTargetsViewProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [minEvidence, setMinEvidence] = useState(1);
     const [showLabels, setShowLabels] = useState(true);
@@ -18,8 +19,9 @@ export default function DirectTargetsView({ data, pathwayMapping, selectedTF, on
 
     // Get unique TFs for selector
     const availableTFs = useMemo(() => {
+        if (tfOptions && tfOptions.length > 0) return tfOptions;
         return Array.from(new Set(data.map(d => d.tf))).sort();
-    }, [data]);
+    }, [data, tfOptions]);
 
     // Filter targets by selected TF, evidence level, and sources
     const targets = useMemo(() => {

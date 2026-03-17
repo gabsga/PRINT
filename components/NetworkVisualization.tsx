@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { IntegratedInteraction, PathwayMapping } from '../types';
 import DirectTargetsView from './DirectTargetsView';
 import HierarchicalView from './HierarchicalView';
 import PathwayVisualization from './PathwayVisualization';
 import { PathwayData } from '../services/pathwayLoader';
 import PathwaySelector from './PathwaySelector';
+import { fetchSupabaseInteractionsForTF, fetchSupabaseTFOptions } from '../services/dataLoader';
 
 export type NetworkView = 'direct' | 'hierarchical' | 'pathway';
 
@@ -20,6 +21,58 @@ interface NetworkVisualizationProps {
 export default function NetworkVisualization({ data, pathwayMapping, pathwayData, geneMapping, onViewChange, onPathwayChange }: NetworkVisualizationProps) {
     const [view, setView] = useState<NetworkView>('direct');
     const [selectedTF, setSelectedTF] = useState('');
+    const [tfOptions, setTfOptions] = useState<string[]>([]);
+    const [tfData, setTfData] = useState<IntegratedInteraction[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        fetchSupabaseTFOptions()
+            .then((rows) => {
+                if (!cancelled && rows.length > 0) {
+                    setTfOptions(rows);
+                }
+            })
+            .catch((error) => {
+                console.warn('Failed to load TF options from Supabase.', error);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        if (!selectedTF) {
+            setTfData([]);
+            return () => {
+                cancelled = true;
+            };
+        }
+
+        fetchSupabaseInteractionsForTF(selectedTF)
+            .then((rows) => {
+                if (!cancelled) {
+                    setTfData(rows);
+                }
+            })
+            .catch((error) => {
+                console.warn(`Failed to load TF interactions for ${selectedTF} from Supabase.`, error);
+                if (!cancelled) {
+                    setTfData([]);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedTF]);
+
+    const effectiveData = selectedTF && tfData.length > 0
+        ? tfData
+        : data;
 
     const handleViewChange = (newView: NetworkView) => {
         setView(newView);
@@ -82,19 +135,21 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
             {/* View Content */}
             {view === 'direct' && (
                 <DirectTargetsView
-                    data={data}
+                    data={effectiveData}
                     pathwayMapping={pathwayMapping}
                     selectedTF={selectedTF}
                     onTFChange={setSelectedTF}
+                    tfOptions={tfOptions}
                 />
             )}
 
             {view === 'hierarchical' && (
                 <HierarchicalView
-                    data={data}
+                    data={effectiveData}
                     pathwayMapping={pathwayMapping}
                     selectedTF={selectedTF}
                     onTFChange={setSelectedTF}
+                    tfOptions={tfOptions}
                 />
             )}
 
