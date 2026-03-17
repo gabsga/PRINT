@@ -11,6 +11,10 @@ This runbook creates and loads the PRINT database in Supabase using SQL Editor +
 5. `select public.print_load_from_staging();`
 6. `docs/supabase/04_security.sql`
 7. `docs/supabase/05_checks.sql`
+8. `docs/supabase/06_integrated_view.sql`
+9. `docs/supabase/07_integrated_materialized.sql`
+10. `docs/supabase/08_tf_options_materialized.sql`
+11. `docs/supabase/09_stats_materialized.sql`
 
 ## 2) Import raw files into staging tables
 
@@ -40,6 +44,10 @@ Set in local `.env.local` or Cloudflare Pages env:
 ```bash
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-jwt>
+VITE_SUPABASE_INTEGRATED_VIEW=print_interactions_integrated_mat
+VITE_SUPABASE_STATS_VIEW=print_interaction_stats_mat
+VITE_SUPABASE_TF_OPTIONS_VIEW=print_tf_options_mat
+VITE_SUPABASE_INITIAL_ROWS=10000
 VITE_SUPABASE_INTERACTIONS_TABLE=print_interactions
 VITE_SUPABASE_MAPPING_TABLE=print_gene_mapping
 VITE_SUPABASE_PROCESS_TABLE=print_process_annotations

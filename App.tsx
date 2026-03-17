@@ -1,12 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { IntegratedInteraction, AnalysisResult, AppView, PathwayMapping, HubMapping } from './types';
+import { IntegratedInteraction, AnalysisResult, AppView, PathwayMapping, HubMapping, DatasetStats } from './types';
 import StatsPanel from './components/StatsPanel';
 import NetworkVisualization from './components/NetworkVisualization';
 import EnrichmentPanel from './components/EnrichmentPanel';
 import Landing from './components/Landing';
 import { analyzeNetwork } from './services/geminiService';
-import { loadIntegratedData } from './services/dataLoader';
+import { fetchSupabaseExploreAll, fetchSupabaseExplorePage, loadIntegratedData } from './services/dataLoader';
 import { PathwayData } from './services/pathwayLoader';
 
 
@@ -25,6 +25,15 @@ const App: React.FC = () => {
   const [goAnnotations, setGoAnnotations] = useState<Record<string, string[]>>({});
   const [hubMapping, setHubMapping] = useState<HubMapping>({});
   const [geneMapping, setGeneMapping] = useState<Record<string, string>>({});
+  const [totalInteractions, setTotalInteractions] = useState(0);
+  const [datasetStats, setDatasetStats] = useState<DatasetStats | undefined>(undefined);
+  const [explorerRows, setExplorerRows] = useState<IntegratedInteraction[]>([]);
+  const [explorerTotal, setExplorerTotal] = useState(0);
+  const [explorerPage, setExplorerPage] = useState(1);
+  const [explorerLoading, setExplorerLoading] = useState(false);
+  const [exportingTSV, setExportingTSV] = useState(false);
+  const [exportProgress, setExportProgress] = useState<string | null>(null);
+  const explorerPageSize = 100;
 
   const [loading, setLoading] = useState(true);
   const [loadingMsg, setLoadingMsg] = useState("Initializing PRINT...");
@@ -59,12 +68,17 @@ const App: React.FC = () => {
 
   const PRIORITY_TFS = ['NLP7', 'TGA1', 'HB7', 'ABF2', 'GBF3', 'MYBR1']; // MYBR1 is MYB44
 
-  // Initialization: Load pre-integrated data
+  // Load data only after the user leaves the landing screen.
   useEffect(() => {
+    if (showLanding) return;
+
     const init = async () => {
+      setLoading(true);
       try {
         const result = await loadIntegratedData((msg) => setLoadingMsg(msg));
         setData(result.interactions);
+        setTotalInteractions(result.totalInteractions || result.interactions.length);
+        setDatasetStats(result.stats);
         setPathwayMapping(result.pathwayMapping);
         setGoAnnotations(result.goAnnotations || {});
         setGeneMapping(result.geneMapping || {});
@@ -78,7 +92,7 @@ const App: React.FC = () => {
       }
     };
     init();
-  }, []);
+  }, [showLanding]);
 
   const allPathways = useMemo(() => {
     const pSet = new Set<string>();
@@ -151,36 +165,107 @@ const App: React.FC = () => {
     return output;
   }, [data, debouncedSearchTerm, minConfidence, selectedPathway, pathwayMapping, selectedGoTerm, goAnnotations, priorityTfFilter, selectedSources, graphScope]);
 
+  useEffect(() => {
+    setExplorerPage(1);
+  }, [debouncedSearchTerm, minConfidence, selectedSources.join('|'), priorityTfFilter]);
+
+  useEffect(() => {
+    if (showLanding || loading || activeView !== 'explorer') return;
+
+    let cancelled = false;
+    setExplorerLoading(true);
+
+    fetchSupabaseExplorePage({
+      searchTerm: debouncedSearchTerm,
+      minConfidence,
+      selectedSources,
+      exactTF: priorityTfFilter,
+      page: explorerPage,
+      pageSize: explorerPageSize
+    })
+      .then((result) => {
+        if (cancelled || !result) return;
+        setExplorerRows(result.rows);
+        setExplorerTotal(result.total);
+      })
+      .catch((error) => {
+        console.warn('Remote explorer query unavailable, using local sample.', error);
+        if (!cancelled) {
+          setExplorerRows([]);
+          setExplorerTotal(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setExplorerLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showLanding, loading, activeView, debouncedSearchTerm, minConfidence, selectedSources.join('|'), priorityTfFilter, explorerPage]);
+
+  const explorerDisplayRows = explorerRows.length > 0 ? explorerRows : filteredData.slice(0, explorerPageSize);
+  const explorerDisplayTotal = explorerTotal || filteredData.length;
+  const explorerTotalPages = Math.max(1, Math.ceil(explorerDisplayTotal / explorerPageSize));
+
   const handleDownloadTSV = () => {
-    const sanitizeTSVCell = (value: string | number) => String(value).replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
-    const headers = ['TF', 'Target', 'Evidence_Sources', 'Direction', 'Evidence_Count', 'Processes'];
-    const rows = filteredData.map(row => {
-      const tfVal = exportFormat === 'symbol' ? row.tf : (row.tfId || row.tf);
-      const targetVal = exportFormat === 'symbol' ? row.target : (row.targetId || row.target);
-      const processes = Array.from(new Set([
-        ...(pathwayMapping[row.target.toUpperCase()] || []),
-        ...(pathwayMapping[(row.targetId || '').toUpperCase()] || [])
-      ])).join('|');
+    const run = async () => {
+      setExportingTSV(true);
+      setExportProgress('Preparing export...');
 
-      return [
-        sanitizeTSVCell(tfVal),
-        sanitizeTSVCell(targetVal),
-        sanitizeTSVCell(row.sources.join('|')),
-        sanitizeTSVCell(row.direction),
-        sanitizeTSVCell(row.evidenceCount),
-        sanitizeTSVCell(processes)
-      ].join('\t');
-    });
+      try {
+        const remoteRows = await fetchSupabaseExploreAll(
+          {
+            searchTerm: debouncedSearchTerm,
+            minConfidence,
+            selectedSources,
+            exactTF: priorityTfFilter
+          },
+          (loaded, total) => {
+            setExportProgress(`Preparing export... ${loaded.toLocaleString()} / ${total.toLocaleString()}`);
+          }
+        );
 
-    const blob = new Blob([headers.join('\t') + '\n' + rows.join('\n')], { type: 'text/tab-separated-values' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `genereg_export_${exportFormat}_${new Date().toISOString().split('T')[0]}.tsv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+        const sourceRows = remoteRows && remoteRows.length > 0 ? remoteRows : explorerDisplayRows;
+        const sanitizeTSVCell = (value: string | number) => String(value).replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
+        const headers = ['TF', 'Target', 'Evidence_Sources', 'Direction', 'Evidence_Count', 'Processes'];
+        const rows = sourceRows.map(row => {
+          const tfVal = exportFormat === 'symbol' ? row.tf : (row.tfId || row.tf);
+          const targetVal = exportFormat === 'symbol' ? row.target : (row.targetId || row.target);
+          const processes = Array.from(new Set([
+            ...(pathwayMapping[row.target.toUpperCase()] || []),
+            ...(pathwayMapping[(row.targetId || '').toUpperCase()] || [])
+          ])).join('|');
+
+          return [
+            sanitizeTSVCell(tfVal),
+            sanitizeTSVCell(targetVal),
+            sanitizeTSVCell(row.sources.join('|')),
+            sanitizeTSVCell(row.direction),
+            sanitizeTSVCell(row.evidenceCount),
+            sanitizeTSVCell(processes)
+          ].join('\t');
+        });
+
+        const blob = new Blob([headers.join('\t') + '\n' + rows.join('\n')], { type: 'text/tab-separated-values' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `genereg_export_${exportFormat}_${new Date().toISOString().split('T')[0]}.tsv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error(error);
+        setErrorMessage('Error exporting filtered TSV from Supabase.');
+      } finally {
+        setExportingTSV(false);
+        setExportProgress(null);
+      }
+    };
+
+    void run();
   };
 
   const handleAiAnalysis = async () => {
@@ -193,6 +278,17 @@ const App: React.FC = () => {
     } catch (e) { setErrorMessage("Error en análisis AI"); }
     finally { setIsAnalyzing(false); }
   };
+
+  if (showLanding) {
+    return (
+      <Landing
+        onEnter={() => {
+          setShowLanding(false);
+          setActiveView('explorer');
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -221,17 +317,6 @@ const App: React.FC = () => {
     );
   }
 
-  if (showLanding) {
-    return (
-      <Landing
-        onEnter={() => {
-          setShowLanding(false);
-          setActiveView('explorer');
-        }}
-      />
-    );
-  }
-
   return (
     <div className="print-shell print-grid flex h-screen overflow-hidden">
       {/* Mobile overlay */}
@@ -255,7 +340,7 @@ const App: React.FC = () => {
             <div className="text-[10px] font-bold text-[var(--print-mint)] uppercase tracking-widest mb-2">Database</div>
             <div className="text-xs font-medium text-slate-300 flex justify-between">
               <span>Interactions:</span>
-              <span className="text-[var(--print-mint)] font-bold">{data.length}</span>
+              <span className="text-[var(--print-mint)] font-bold">{totalInteractions || data.length}</span>
             </div>
             <div className="text-xs font-medium text-slate-300 flex justify-between mt-1">
               <span>Genes/Processes:</span>
@@ -345,7 +430,7 @@ const App: React.FC = () => {
                   {showExplorerSummary ? 'Hide Summary' : 'Show Summary'}
                 </button>
               </div>
-              {showExplorerSummary && <StatsPanel data={filteredData} />}
+              {showExplorerSummary && <StatsPanel data={filteredData} totalInteractions={totalInteractions} stats={datasetStats} />}
               <div className="print-panel rounded-3xl overflow-hidden">
                 <div className="p-6 border-b border-[var(--print-line)] bg-black/10">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -355,7 +440,10 @@ const App: React.FC = () => {
                         placeholder="Search by Gene ID (AGI) or Gene Symbol..."
                         className="w-full pl-4 pr-4 py-2.5 bg-black/10 border border-[var(--print-line)] rounded-2xl text-sm outline-none shadow-sm focus:ring-2 focus:ring-[var(--print-mint)] text-slate-200 placeholder-slate-500"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setPriorityTfFilter(null);
+                        }}
                       />
                       <p className="mt-2 text-[11px] text-[var(--print-fog)]">
                         Search supports Gene ID (AGI; e.g. AT1G01010) and Gene Symbol (e.g. ABI5).
@@ -365,11 +453,14 @@ const App: React.FC = () => {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {PRIORITY_TFS.map(gene => {
-                          const isActive = searchTerm.trim().toUpperCase() === gene;
+                          const isActive = priorityTfFilter === gene;
                           return (
                             <button
                               key={gene}
-                              onClick={() => setSearchTerm(isActive ? '' : gene)}
+                              onClick={() => {
+                                setPriorityTfFilter(isActive ? null : gene);
+                                setSearchTerm(isActive ? '' : gene);
+                              }}
                               className={`px-3 py-1 rounded-md text-[11px] font-bold border transition-all ${isActive ? 'print-button border-transparent' : 'bg-black/10 text-slate-300 border-[var(--print-line)] hover:border-[var(--print-line-strong)]'}`}
                             >
                               {gene}
@@ -383,13 +474,18 @@ const App: React.FC = () => {
                         <button onClick={() => setExportFormat('geneId')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'geneId' ? 'print-button' : 'text-slate-400 hover:text-slate-300'}`}>ID</button>
                         <button onClick={() => setExportFormat('symbol')} className={`px-2 py-1 text-[10px] font-bold rounded ${exportFormat === 'symbol' ? 'print-button' : 'text-slate-400 hover:text-slate-300'}`}>Symbol</button>
                       </div>
-                      <button onClick={handleDownloadTSV} disabled={filteredData.length === 0} className="px-4 py-2 bg-[rgba(77,231,191,0.08)] text-[var(--print-mint)] border border-[rgba(77,231,191,0.22)] rounded-xl text-xs font-black hover:bg-[rgba(77,231,191,0.14)] disabled:opacity-50 disabled:cursor-not-allowed transition-all uppercase tracking-widest flex items-center gap-2">
+                      <button onClick={handleDownloadTSV} disabled={explorerDisplayRows.length === 0 || exportingTSV} className="px-4 py-2 bg-[rgba(77,231,191,0.08)] text-[var(--print-mint)] border border-[rgba(77,231,191,0.22)] rounded-xl text-xs font-black hover:bg-[rgba(77,231,191,0.14)] disabled:opacity-50 disabled:cursor-not-allowed transition-all uppercase tracking-widest flex items-center gap-2">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-                        TSV
+                        {exportingTSV ? 'EXPORTING' : 'TSV'}
                       </button>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs font-bold text-[var(--print-mint)]">{filteredData.length} interactions visible</div>
+                  <div className="mt-3 text-xs font-bold text-[var(--print-mint)]">
+                    {explorerLoading ? 'Loading page...' : `${explorerDisplayTotal} interactions found`}
+                  </div>
+                  {exportProgress && (
+                    <div className="mt-2 text-[11px] text-[var(--print-fog)]">{exportProgress}</div>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -402,7 +498,7 @@ const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--print-line)]">
-                      {filteredData.slice(0, 100).map((row, idx) => {
+                      {explorerDisplayRows.map((row, idx) => {
                         const isHub = !!hubMapping[row.target];
 
                         return (
@@ -429,7 +525,23 @@ const App: React.FC = () => {
                       })}
                     </tbody>
                   </table>
-                  {filteredData.length > 100 && <div className="p-4 text-center text-xs text-[var(--print-fog)] font-medium border-t border-[var(--print-line)]">Showing first 100 results of {filteredData.length}</div>}
+                  <div className="p-4 text-center text-xs text-[var(--print-fog)] font-medium border-t border-[var(--print-line)] flex items-center justify-center gap-4">
+                    <button
+                      onClick={() => setExplorerPage((page) => Math.max(1, page - 1))}
+                      disabled={explorerPage <= 1 || explorerLoading}
+                      className="px-3 py-1 rounded-lg border border-[var(--print-line)] disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <span>Page {explorerPage} / {explorerTotalPages}</span>
+                    <button
+                      onClick={() => setExplorerPage((page) => Math.min(explorerTotalPages, page + 1))}
+                      disabled={explorerPage >= explorerTotalPages || explorerLoading}
+                      className="px-3 py-1 rounded-lg border border-[var(--print-line)] disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

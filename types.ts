@@ -29,6 +29,16 @@ export interface IntegratedInteraction {
   };
 }
 
+export interface DatasetStats {
+  sourceCounts: {
+    name: 'TARGET' | 'DAP' | 'CHIP';
+    count: number;
+  }[];
+  highConfidence3: number;
+  uniqueTFs: number;
+  uniqueTargets: number;
+}
+
 export interface DataSource {
   id: 'TARGET' | 'DAP' | 'CHIP';
   name: string;

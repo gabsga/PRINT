@@ -7,18 +7,20 @@ interface HierarchicalViewProps {
     pathwayMapping: PathwayMapping;
     selectedTF: string;
     onTFChange: (tf: string) => void;
+    tfOptions?: string[];
 }
 
-export default function HierarchicalView({ data, pathwayMapping, selectedTF, onTFChange }: HierarchicalViewProps) {
+export default function HierarchicalView({ data, pathwayMapping, selectedTF, onTFChange, tfOptions }: HierarchicalViewProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [showDownstreamTargets, setShowDownstreamTargets] = useState(false);
     const [showLabels, setShowLabels] = useState(true);
 
     // Get unique TFs
     const availableTFs = useMemo(() => {
+        if (tfOptions && tfOptions.length > 0) return tfOptions;
         const tfSet = new Set(data.map(d => d.tf));
         return Array.from(tfSet).sort();
-    }, [data]);
+    }, [data, tfOptions]);
 
     // Build TF network
     const tfNetwork = useMemo(() => {
