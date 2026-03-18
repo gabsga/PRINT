@@ -9,6 +9,42 @@ interface StatsPanelProps {
   stats?: DatasetStats;
 }
 
+interface TooltipPayload {
+  name: 'TARGET' | 'DAP' | 'CHIP';
+  value: number;
+  payload: {
+    name: 'TARGET' | 'DAP' | 'CHIP';
+    count: number;
+  };
+}
+
+function EvidenceTooltip({
+  active,
+  payload,
+  totalEvidence
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  totalEvidence: number;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const entry = payload[0];
+  const percentage = ((entry.value / totalEvidence) * 100).toFixed(1);
+
+  return (
+    <div className="rounded-2xl border border-[rgba(119,167,159,0.4)] bg-[rgba(16,25,29,0.96)] px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      <div className="text-xs font-black text-slate-50">{entry.name}</div>
+      <div className="mt-1 text-[11px] font-medium text-slate-100">
+        {entry.value.toLocaleString()} interactions
+      </div>
+      <div className="mt-1 text-[11px] font-bold text-slate-50">{percentage}% of evidence</div>
+    </div>
+  );
+}
+
 const StatsPanel: React.FC<StatsPanelProps> = ({ data, totalInteractions, stats }) => {
   const sourceCounts = stats?.sourceCounts || [
     { name: 'TARGET', count: data.filter(i => i.sources.includes('TARGET')).length },
@@ -17,6 +53,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ data, totalInteractions, stats 
   ];
 
   const COLORS = ['#4de7bf', '#d7aa63', '#69d7cf'];
+  const totalEvidence = sourceCounts.reduce((sum, entry) => sum + entry.count, 0) || 1;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -27,13 +64,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ data, totalInteractions, stats 
             <PieChart>
               <Tooltip
                 cursor={{ fill: '#203038' }}
-                contentStyle={{
-                  backgroundColor: '#203038',
-                  border: '1px solid rgba(119, 167, 159, 0.26)',
-                  borderRadius: '12px',
-                  color: '#eef4ef',
-                  fontWeight: 600
-                }}
+                content={<EvidenceTooltip totalEvidence={totalEvidence} />}
               />
               <Pie data={sourceCounts} dataKey="count" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
                 {sourceCounts.map((entry, index) => (
@@ -42,6 +73,20 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ data, totalInteractions, stats 
               </Pie>
             </PieChart>
           </ResponsiveContainer>
+        </div>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {sourceCounts.map((entry, index) => (
+            <div key={entry.name} className="rounded-2xl border border-[var(--print-line)] bg-black/10 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                <span className="text-xs font-bold text-slate-100">{entry.name}</span>
+              </div>
+              <div className="mt-2 text-lg font-black text-white">{entry.count.toLocaleString()}</div>
+              <div className="text-[11px] text-[var(--print-fog)]">
+                {((entry.count / totalEvidence) * 100).toFixed(1)}% of evidence
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

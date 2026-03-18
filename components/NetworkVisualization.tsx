@@ -1,78 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { IntegratedInteraction, PathwayMapping } from '../types';
+import React, { useState } from 'react';
 import DirectTargetsView from './DirectTargetsView';
 import HierarchicalView from './HierarchicalView';
 import PathwayVisualization from './PathwayVisualization';
 import { PathwayData } from '../services/pathwayLoader';
 import PathwaySelector from './PathwaySelector';
-import { fetchSupabaseInteractionsForTF, fetchSupabaseTFOptions } from '../services/dataLoader';
+import { useNetworkData } from '../hooks/useNetworkData';
 
 export type NetworkView = 'direct' | 'hierarchical' | 'pathway';
 
 interface NetworkVisualizationProps {
-    data: IntegratedInteraction[];
-    pathwayMapping: PathwayMapping;
     pathwayData?: PathwayData | null;
-    geneMapping?: Record<string, string>;
     onViewChange?: (view: NetworkView) => void;
     onPathwayChange?: (pathway: PathwayData | null) => void;
 }
 
-export default function NetworkVisualization({ data, pathwayMapping, pathwayData, geneMapping, onViewChange, onPathwayChange }: NetworkVisualizationProps) {
+export default function NetworkVisualization({ pathwayData, onViewChange, onPathwayChange }: NetworkVisualizationProps) {
     const [view, setView] = useState<NetworkView>('direct');
     const [selectedTF, setSelectedTF] = useState('');
-    const [tfOptions, setTfOptions] = useState<string[]>([]);
-    const [tfData, setTfData] = useState<IntegratedInteraction[]>([]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        fetchSupabaseTFOptions()
-            .then((rows) => {
-                if (!cancelled && rows.length > 0) {
-                    setTfOptions(rows);
-                }
-            })
-            .catch((error) => {
-                console.warn('Failed to load TF options from Supabase.', error);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        if (!selectedTF) {
-            setTfData([]);
-            return () => {
-                cancelled = true;
-            };
-        }
-
-        fetchSupabaseInteractionsForTF(selectedTF)
-            .then((rows) => {
-                if (!cancelled) {
-                    setTfData(rows);
-                }
-            })
-            .catch((error) => {
-                console.warn(`Failed to load TF interactions for ${selectedTF} from Supabase.`, error);
-                if (!cancelled) {
-                    setTfData([]);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedTF]);
-
-    const effectiveData = selectedTF && tfData.length > 0
-        ? tfData
-        : data;
+    const {
+        directData,
+        error,
+        geneMapping,
+        hierarchyData,
+        loading,
+        pathwayMapping,
+        tfOptions
+    } = useNetworkData(selectedTF, pathwayData);
 
     const handleViewChange = (newView: NetworkView) => {
         setView(newView);
@@ -83,7 +36,12 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
 
     return (
         <div className="space-y-6">
-            {/* View Selector */}
+            {error && (
+                <div className="p-4 bg-red-900/20 text-red-400 text-sm font-bold rounded-2xl border border-red-800">
+                    {error}
+                </div>
+            )}
+
             <div className="print-panel rounded-2xl p-2 flex items-center gap-2 w-fit">
                 <button
                     onClick={() => handleViewChange('direct')}
@@ -132,10 +90,9 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                 />
             )}
 
-            {/* View Content */}
             {view === 'direct' && (
                 <DirectTargetsView
-                    data={effectiveData}
+                    data={directData}
                     pathwayMapping={pathwayMapping}
                     selectedTF={selectedTF}
                     onTFChange={setSelectedTF}
@@ -145,7 +102,7 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
 
             {view === 'hierarchical' && (
                 <HierarchicalView
-                    data={effectiveData}
+                    data={hierarchyData.length > 0 ? hierarchyData : directData}
                     pathwayMapping={pathwayMapping}
                     selectedTF={selectedTF}
                     onTFChange={setSelectedTF}
@@ -157,8 +114,8 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                 pathwayData ? (
                     <PathwayVisualization
                         pathwayData={pathwayData}
-                        regulatoryData={data}
-                        geneMapping={geneMapping || {}}
+                        regulatoryData={directData}
+                        geneMapping={geneMapping}
                         tfOptions={tfOptions}
                     />
                 ) : (
@@ -170,6 +127,10 @@ export default function NetworkVisualization({ data, pathwayMapping, pathwayData
                         </div>
                     </div>
                 )
+            )}
+
+            {loading && (
+                <div className="text-xs text-[var(--print-fog)]">Loading network data...</div>
             )}
         </div>
     );
