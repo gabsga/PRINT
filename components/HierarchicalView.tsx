@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { IntegratedInteraction, PathwayMapping } from '../types';
 
@@ -10,62 +10,72 @@ interface HierarchicalViewProps {
     tfOptions?: string[];
 }
 
+type DirectTargetNode = {
+    isTF: boolean;
+    target: string;
+};
+
 export default function HierarchicalView({ data, pathwayMapping, selectedTF, onTFChange, tfOptions }: HierarchicalViewProps) {
     const svgRef = useRef<SVGSVGElement>(null);
-    const [showDownstreamTargets, setShowDownstreamTargets] = useState(false);
+    const [showSecondaryTFs, setShowSecondaryTFs] = useState(false);
     const [showLabels, setShowLabels] = useState(true);
 
-    // Get unique TFs
     const availableTFs = useMemo(() => {
         if (tfOptions && tfOptions.length > 0) return tfOptions;
         const tfSet = new Set(data.map(d => d.tf));
         return Array.from(tfSet).sort();
     }, [data, tfOptions]);
 
-    // Build TF network
-    const tfNetwork = useMemo(() => {
-        const tfSet = new Set(data.map(d => d.tf));
-        const network: Record<string, { upstream: string[], downstream: string[], targets: string[] }> = {};
+    const tfSet = useMemo(() => (
+        new Set((tfOptions && tfOptions.length > 0 ? tfOptions : data.map(d => d.tf)).map(tf => tf.trim().toUpperCase()))
+    ), [data, tfOptions]);
 
-        data.forEach(({ tf, target }) => {
-            if (!network[tf]) network[tf] = { upstream: [], downstream: [], targets: [] };
-
-            if (tfSet.has(target)) {
-                // Target is also a TF - but exclude auto-regulation
-                if (tf !== target) {
-                    if (!network[target]) network[target] = { upstream: [], downstream: [], targets: [] };
-                    network[tf].downstream.push(target);
-                    network[target].upstream.push(tf);
-                }
-            } else {
-                // Target is a regular gene
-                network[tf].targets.push(target);
-            }
-        });
-
-        return network;
-    }, [data]);
-
-    // Get hierarchy for selected TF
     const hierarchy = useMemo(() => {
-        if (!selectedTF || !tfNetwork[selectedTF]) return null;
+        if (!selectedTF) return null;
 
-        const upstream = tfNetwork[selectedTF].upstream || [];
-        const downstream = tfNetwork[selectedTF].downstream || [];
-        const downstreamTargets: Record<string, string[]> = {};
+        const center = selectedTF.trim().toUpperCase();
+        const upstream = Array.from(new Set(
+            data
+                .filter((row) => row.target.toUpperCase() === center && row.tf.toUpperCase() !== center)
+                .map((row) => row.tf)
+        )).sort();
 
-        if (showDownstreamTargets) {
-            downstream.forEach(tf => {
-                downstreamTargets[tf] = tfNetwork[tf]?.targets || [];
-            });
+        const directTargets = Array.from(new Map(
+            data
+                .filter((row) => row.tf.toUpperCase() === center)
+                .map((row) => [
+                    row.target.toUpperCase(),
+                    {
+                        target: row.target,
+                        isTF: tfSet.has(row.target.toUpperCase())
+                    } satisfies DirectTargetNode
+                ])
+        ).values()).sort((a, b) => a.target.localeCompare(b.target));
+
+        const downstreamTFsByTarget: Record<string, string[]> = {};
+        if (showSecondaryTFs) {
+            directTargets
+                .filter((target) => target.isTF)
+                .forEach((target) => {
+                    downstreamTFsByTarget[target.target] = Array.from(new Set(
+                        data
+                            .filter((row) => row.tf.toUpperCase() === target.target.toUpperCase())
+                            .map((row) => row.target)
+                            .filter((gene) => tfSet.has(gene.toUpperCase()) && gene.toUpperCase() !== center)
+                    )).sort();
+                });
         }
 
-        return { upstream, downstream, downstreamTargets };
-    }, [selectedTF, tfNetwork, showDownstreamTargets]);
+        return {
+            directTargets,
+            downstreamTFCount: Array.from(new Set(Object.values(downstreamTFsByTarget).flat())).length,
+            downstreamTFsByTarget,
+            upstream
+        };
+    }, [data, selectedTF, showSecondaryTFs, tfSet]);
 
-    // Get biological process color for TF
-    const getTFColor = (tf: string): string => {
-        const processes = pathwayMapping[tf] || [];
+    const getProcessColor = (gene: string): string => {
+        const processes = pathwayMapping[gene.toUpperCase()] || [];
 
         for (const process of processes) {
             if (process.includes('ABA') || process.includes('abscisic')) return '#3b82f6';
@@ -85,14 +95,11 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
         if (!svgRef.current || !selectedTF || !hierarchy) return;
 
         const width = svgRef.current.clientWidth;
-        const height = 800;
-
+        const height = 920;
         const svg = d3.select(svgRef.current);
         svg.selectAll('*').remove();
 
         const g = svg.append('g');
-
-        // Setup zoom
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
             .on('zoom', (event) => {
@@ -101,160 +108,6 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
 
         svg.call(zoom);
 
-        // Layout parameters
-        const levelSpacing = 200;
-        const nodeSpacing = 120;
-        const centerX = width / 2;
-
-        // Level -1: Upstream TFs
-        const upstreamY = 100;
-        const upstreamStartX = centerX - ((hierarchy.upstream.length - 1) * nodeSpacing) / 2;
-
-        hierarchy.upstream.forEach((tf, idx) => {
-            const x = upstreamStartX + idx * nodeSpacing;
-            const color = getTFColor(tf);
-
-            const node = g.append('g').attr('transform', `translate(${x}, ${upstreamY})`);
-
-            node.append('path')
-                .attr('d', d3.symbol().type(d3.symbolTriangle).size(300)())
-                .attr('fill', color)
-                .attr('stroke', '#1e293b')
-                .attr('stroke-width', 2);
-
-            if (showLabels) {
-                node.append('text')
-                    .text(tf)
-                    .attr('y', -20)
-                    .attr('text-anchor', 'middle')
-                    .attr('fill', color)
-                    .attr('font-size', '12px')
-                    .attr('font-weight', 'bold');
-            }
-
-            // Connection to selected TF
-            g.append('line')
-                .attr('x1', x)
-                .attr('y1', upstreamY + 12)
-                .attr('x2', centerX)
-                .attr('y2', upstreamY + levelSpacing - 12)
-                .attr('stroke', color)
-                .attr('stroke-width', 2)
-                .attr('opacity', 0.6)
-                .attr('marker-end', 'url(#arrow)');
-
-            node.append('title').text(`${tf}\nRegulates: ${selectedTF}`);
-        });
-
-        // Level 0: Selected TF
-        const selectedY = upstreamY + levelSpacing;
-        const selectedColor = getTFColor(selectedTF);
-
-        const selectedNode = g.append('g').attr('transform', `translate(${centerX}, ${selectedY})`);
-
-        selectedNode.append('path')
-            .attr('d', d3.symbol().type(d3.symbolTriangle).size(500)())
-            .attr('fill', selectedColor)
-            .attr('stroke', '#10b981')
-            .attr('stroke-width', 3);
-
-        selectedNode.append('text')
-            .text(selectedTF)
-            .attr('y', -25)
-            .attr('text-anchor', 'middle')
-            .attr('fill', '#10b981')
-            .attr('font-size', '16px')
-            .attr('font-weight', 'bold');
-
-        // Level +1: Downstream TFs
-        const downstreamY = selectedY + levelSpacing;
-        const downstreamStartX = centerX - ((hierarchy.downstream.length - 1) * nodeSpacing) / 2;
-
-        hierarchy.downstream.forEach((tf, idx) => {
-            const x = downstreamStartX + idx * nodeSpacing;
-            const color = getTFColor(tf);
-
-            const node = g.append('g').attr('transform', `translate(${x}, ${downstreamY})`);
-
-            node.append('path')
-                .attr('d', d3.symbol().type(d3.symbolTriangle).size(300)())
-                .attr('fill', color)
-                .attr('stroke', '#1e293b')
-                .attr('stroke-width', 2);
-
-            if (showLabels) {
-                node.append('text')
-                    .text(tf)
-                    .attr('y', -20)
-                    .attr('text-anchor', 'middle')
-                    .attr('fill', color)
-                    .attr('font-size', '12px')
-                    .attr('font-weight', 'bold');
-            }
-
-            // Connection from selected TF
-            g.append('line')
-                .attr('x1', centerX)
-                .attr('y1', selectedY + 12)
-                .attr('x2', x)
-                .attr('y2', downstreamY - 12)
-                .attr('stroke', color)
-                .attr('stroke-width', 2)
-                .attr('opacity', 0.6)
-                .attr('marker-end', 'url(#arrow)');
-
-            // Downstream targets (if enabled)
-            if (showDownstreamTargets && hierarchy.downstreamTargets[tf]) {
-                const targets = hierarchy.downstreamTargets[tf].slice(0, 5); // Limit to 5
-                const targetsY = downstreamY + 100;
-
-                targets.forEach((target, targetIdx) => {
-                    const targetX = x + (targetIdx - 2) * 30;
-
-                    g.append('circle')
-                        .attr('cx', targetX)
-                        .attr('cy', targetsY)
-                        .attr('r', 5)
-                        .attr('fill', color)
-                        .attr('stroke', '#1e293b')
-                        .attr('stroke-width', 1.5);
-
-                    g.append('line')
-                        .attr('x1', x)
-                        .attr('y1', downstreamY + 12)
-                        .attr('x2', targetX)
-                        .attr('y2', targetsY - 5)
-                        .attr('stroke', color)
-                        .attr('stroke-width', 1)
-                        .attr('opacity', 0.4);
-
-                    if (showLabels) {
-                        g.append('text')
-                            .text(target)
-                            .attr('x', targetX)
-                            .attr('y', targetsY + 20)
-                            .attr('text-anchor', 'middle')
-                            .attr('fill', '#94a3b8')
-                            .attr('font-size', '9px');
-                    }
-                });
-
-                if (hierarchy.downstreamTargets[tf].length > 5) {
-                    g.append('text')
-                        .text(`+${hierarchy.downstreamTargets[tf].length - 5} more`)
-                        .attr('x', x)
-                        .attr('y', targetsY + 40)
-                        .attr('text-anchor', 'middle')
-                        .attr('fill', '#64748b')
-                        .attr('font-size', '10px')
-                        .attr('font-style', 'italic');
-                }
-            }
-
-            node.append('title').text(`${tf}\nRegulated by: ${selectedTF}\nTargets: ${tfNetwork[tf]?.targets.length || 0} genes`);
-        });
-
-        // Arrow marker
         const defs = svg.append('defs');
         defs.append('marker')
             .attr('id', 'arrow')
@@ -268,17 +121,147 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
             .attr('d', 'M0,-5L10,0L0,5')
             .attr('fill', '#64748b');
 
-        // Reset zoom on double-click
+        const centerX = width / 2;
+        const upstreamY = 100;
+        const selectedY = 280;
+        const directTargetsY = 500;
+        const secondaryTFsY = 730;
+        const upstreamSpacing = Math.max(80, Math.min(130, width / Math.max(2, hierarchy.upstream.length + 1)));
+        const directSpacing = Math.max(40, Math.min(80, width / Math.max(3, hierarchy.directTargets.length + 1)));
+
+        const drawTriangle = (x: number, y: number, color: string, size: number, label?: string) => {
+            const node = g.append('g').attr('transform', `translate(${x}, ${y})`);
+            node.append('path')
+                .attr('d', d3.symbol().type(d3.symbolTriangle).size(size)())
+                .attr('fill', color)
+                .attr('stroke', '#1e293b')
+                .attr('stroke-width', 2);
+
+            if (showLabels && label) {
+                node.append('text')
+                    .text(label)
+                    .attr('y', -20)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', color)
+                    .attr('font-size', '12px')
+                    .attr('font-weight', 'bold');
+            }
+
+            return node;
+        };
+
+        const drawTargetNode = (x: number, y: number, color: string, label: string, isTF: boolean) => {
+            const node = g.append('g').attr('transform', `translate(${x}, ${y})`);
+            if (isTF) {
+                node.append('path')
+                    .attr('d', d3.symbol().type(d3.symbolTriangle).size(280)())
+                    .attr('fill', color)
+                    .attr('stroke', '#d7aa63')
+                    .attr('stroke-width', 3);
+
+                node.append('path')
+                    .attr('d', d3.symbol().type(d3.symbolTriangle).size(430)())
+                    .attr('fill', 'none')
+                    .attr('stroke', '#d7aa63')
+                    .attr('stroke-opacity', 0.3)
+                    .attr('stroke-width', 2);
+            } else {
+                node.append('circle')
+                    .attr('r', 8)
+                    .attr('fill', color)
+                    .attr('stroke', '#1e293b')
+                    .attr('stroke-width', 2);
+            }
+
+            if (showLabels) {
+                node.append('text')
+                    .text(label)
+                    .attr('y', 24)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', isTF ? '#efc98e' : '#cbd5e1')
+                    .attr('font-size', '10px')
+                    .attr('font-weight', isTF ? 'bold' : 'normal');
+            }
+
+            return node;
+        };
+
+        const upstreamStartX = centerX - ((hierarchy.upstream.length - 1) * upstreamSpacing) / 2;
+        hierarchy.upstream.forEach((tf, idx) => {
+            const x = upstreamStartX + idx * upstreamSpacing;
+            const color = getProcessColor(tf);
+            drawTriangle(x, upstreamY, color, 260, tf)
+                .append('title')
+                .text(`${tf}\nUpstream regulator of ${selectedTF}`);
+
+            g.append('line')
+                .attr('x1', x)
+                .attr('y1', upstreamY + 12)
+                .attr('x2', centerX)
+                .attr('y2', selectedY - 16)
+                .attr('stroke', color)
+                .attr('stroke-width', 2)
+                .attr('opacity', 0.5)
+                .attr('marker-end', 'url(#arrow)');
+        });
+
+        const selectedColor = getProcessColor(selectedTF);
+        drawTriangle(centerX, selectedY, selectedColor, 520, selectedTF)
+            .select('path')
+            .attr('stroke', '#10b981')
+            .attr('stroke-width', 3);
+
+        const directStartX = centerX - ((hierarchy.directTargets.length - 1) * directSpacing) / 2;
+        hierarchy.directTargets.forEach((target, idx) => {
+            const x = directStartX + idx * directSpacing;
+            const color = target.isTF ? '#69d7cf' : getProcessColor(target.target);
+            drawTargetNode(x, directTargetsY, color, target.target, target.isTF)
+                .append('title')
+                .text(target.isTF
+                    ? `${target.target}\nDirect target of ${selectedTF}\nAlso acts as TF`
+                    : `${target.target}\nDirect target of ${selectedTF}`);
+
+            g.append('line')
+                .attr('x1', centerX)
+                .attr('y1', selectedY + 14)
+                .attr('x2', x)
+                .attr('y2', directTargetsY - 10)
+                .attr('stroke', color)
+                .attr('stroke-width', 1.8)
+                .attr('opacity', 0.45)
+                .attr('marker-end', 'url(#arrow)');
+
+            if (!showSecondaryTFs) return;
+
+            const secondaryTFs = hierarchy.downstreamTFsByTarget[target.target] || [];
+            const secondaryStartX = x - ((secondaryTFs.length - 1) * 44) / 2;
+            secondaryTFs.forEach((secondaryTF, secondaryIdx) => {
+                const childX = secondaryStartX + secondaryIdx * 44;
+                const childColor = getProcessColor(secondaryTF);
+                drawTriangle(childX, secondaryTFsY, childColor, 180, secondaryTF)
+                    .append('title')
+                    .text(`${secondaryTF}\nSecondary downstream TF via ${target.target}`);
+
+                g.append('line')
+                    .attr('x1', x)
+                    .attr('y1', directTargetsY + 10)
+                    .attr('x2', childX)
+                    .attr('y2', secondaryTFsY - 12)
+                    .attr('stroke', childColor)
+                    .attr('stroke-width', 1.2)
+                    .attr('opacity', 0.35)
+                    .attr('marker-end', 'url(#arrow)');
+            });
+        });
+
         svg.on('dblclick.zoom', null);
         svg.on('dblclick', () => {
             svg.transition().duration(750).call(zoom.transform as any, d3.zoomIdentity);
         });
-
-    }, [selectedTF, hierarchy, showDownstreamTargets, showLabels, tfNetwork, pathwayMapping]);
+    }, [hierarchy, pathwayMapping, selectedTF, showLabels]);
 
     return (
         <div className="print-panel rounded-3xl flex flex-col overflow-hidden h-[800px] relative">
-            {/* Header */}
             <div className="p-6 border-b border-[var(--print-line)] bg-black/10 backdrop-blur-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="print-logo-frame w-10 h-10 rounded-xl flex items-center justify-center">
@@ -288,12 +271,12 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                     </div>
                     <div>
                         <h3 className="text-xl font-bold text-white tracking-tight">Hierarchical View</h3>
-                        <p className="text-sm text-[var(--print-mint)] font-medium">TF Regulatory Cascade</p>
+                        <p className="text-sm text-[var(--print-mint)] font-medium">Upstream TFs, selected TF, and direct targets</p>
+                        <p className="text-[11px] text-slate-400 mt-1">Base view: Level -1 upstream TFs, Level 0 selected TF, Level +1 direct targets. Optional +2 expands secondary downstream TFs.</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* TF Selector */}
                     <select
                         value={selectedTF}
                         onChange={(e) => onTFChange(e.target.value)}
@@ -305,18 +288,16 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                         ))}
                     </select>
 
-                    {/* Show Downstream Targets Toggle */}
                     <button
-                        onClick={() => setShowDownstreamTargets(!showDownstreamTargets)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showDownstreamTargets
+                        onClick={() => setShowSecondaryTFs(!showSecondaryTFs)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showSecondaryTFs
                             ? 'bg-[rgba(105,215,207,0.12)] border-[rgba(105,215,207,0.28)] text-[#69d7cf] border'
                             : 'bg-black/10 border-[var(--print-line)] text-slate-400 border'
                             }`}
                     >
-                        {showDownstreamTargets ? 'Hide Targets' : 'Show Targets'}
+                        {showSecondaryTFs ? 'Hide +2 TFs' : 'Show +2 TFs'}
                     </button>
 
-                    {/* Show Labels Toggle */}
                     <button
                         onClick={() => setShowLabels(!showLabels)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showLabels
@@ -329,23 +310,29 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                 </div>
             </div>
 
-            {/* Visualization */}
             <div className="flex-1 relative bg-black/10 overflow-hidden">
-                {/* Legend */}
                 <div className="absolute top-6 left-6 p-4 bg-[rgba(27,40,46,0.86)] backdrop-blur-md border border-[var(--print-line)] rounded-2xl z-10 shadow-2xl">
                     <div className="text-xs font-bold text-[var(--print-mint)] mb-3">Hierarchy</div>
                     <div className="text-xs text-slate-300 space-y-2">
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 bg-[#6c8580]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
-                            <span>Level -1 (Upstream)</span>
+                            <span>Level -1 Upstream TFs</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[var(--print-mint)]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
-                            <span>Level 0 (Selected)</span>
+                            <span>Level 0 Selected TF</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-[#69d7cf]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
-                            <span>Level +1 (Downstream)</span>
+                            <div className="w-4 h-4 rounded-full bg-[#69d7cf]"></div>
+                            <span>Level +1 Direct Targets</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-[#69d7cf] border-2 border-[#d7aa63]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+                            <span>Direct targets that are also TFs</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-[#d7aa63]" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+                            <span>Level +2 Secondary TFs</span>
                         </div>
                     </div>
                     <div className="text-xs text-slate-400 mt-3 pt-3 border-t border-[var(--print-line)]">
@@ -355,17 +342,20 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                     </div>
                 </div>
 
-                {/* Stats */}
                 {selectedTF && hierarchy && (
                     <div className="absolute top-6 right-6 p-4 bg-[rgba(27,40,46,0.86)] backdrop-blur-md border border-[var(--print-line)] rounded-2xl shadow-2xl">
-                        <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
                                 <div className="text-2xl font-black text-[#d7aa63]">{hierarchy.upstream.length}</div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase">Upstream</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">Upstream TFs</div>
                             </div>
                             <div>
-                                <div className="text-2xl font-black text-[#69d7cf]">{hierarchy.downstream.length}</div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase">Downstream</div>
+                                <div className="text-2xl font-black text-[#69d7cf]">{hierarchy.directTargets.length}</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">Direct Targets</div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-black text-[var(--print-mint)]">{showSecondaryTFs ? hierarchy.downstreamTFCount : 0}</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">+2 TFs</div>
                             </div>
                         </div>
                     </div>
@@ -375,15 +365,15 @@ export default function HierarchicalView({ data, pathwayMapping, selectedTF, onT
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
                             <div className="text-6xl mb-4">📊</div>
-                            <div className="text-xl font-bold text-slate-400">Select a TF to view cascade</div>
+                            <div className="text-xl font-bold text-slate-400">Select a TF to view hierarchy</div>
                         </div>
                     </div>
-                ) : !hierarchy || (hierarchy.upstream.length === 0 && hierarchy.downstream.length === 0) ? (
+                ) : !hierarchy || (hierarchy.upstream.length === 0 && hierarchy.directTargets.length === 0) ? (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
                             <div className="text-6xl mb-4">🔍</div>
-                            <div className="text-xl font-bold text-slate-400">No TF cascade found</div>
-                            <div className="text-sm text-slate-500 mt-2">This TF has no upstream or downstream TFs</div>
+                            <div className="text-xl font-bold text-slate-400">No hierarchy found</div>
+                            <div className="text-sm text-slate-500 mt-2">This TF has no upstream regulators or direct targets in the current dataset.</div>
                         </div>
                     </div>
                 ) : (

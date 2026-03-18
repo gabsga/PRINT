@@ -1,13 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IntegratedInteraction } from '../types';
 import { computeEnrichment, EnrichmentResult } from '../services/enrichment';
-import { fetchSupabaseTfTargetSets } from '../services/dataLoader';
+import { useEnrichmentData } from '../hooks/useEnrichmentData';
 
 interface EnrichmentPanelProps {
-  data: IntegratedInteraction[];
   selectedSources: string[];
   minConfidence: number;
-  goAnnotations: Record<string, string[]>;
 }
 
 const GENE_UNIVERSE_URL = '/data/araport11_genes.tsv';
@@ -24,7 +21,7 @@ const GO_TERMS = [
 
 const DEFAULT_GO = ['Water deprivation', 'Response to ABA'];
 
-export default function EnrichmentPanel({ data, selectedSources, minConfidence, goAnnotations }: EnrichmentPanelProps) {
+export default function EnrichmentPanel({ selectedSources, minConfidence }: EnrichmentPanelProps) {
   const [results, setResults] = useState<EnrichmentResult[]>([]);
   const [termGeneCount, setTermGeneCount] = useState(0);
   const [evidenceThreshold, setEvidenceThreshold] = useState(minConfidence);
@@ -32,11 +29,11 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
   const [activeTerm, setActiveTerm] = useState<string>('');
   const [selectedTerms, setSelectedTerms] = useState<string[]>([]);
 
+  const { error, goAnnotations, loading, tfTargets } = useEnrichmentData(selectedSources, evidenceThreshold);
   const [universe, setUniverse] = useState<Set<string> | null>(null);
   const [universeError, setUniverseError] = useState<string | null>(null);
   const [loadingUniverse, setLoadingUniverse] = useState(false);
-  const [remoteTfTargets, setRemoteTfTargets] = useState<Map<string, Set<string>> | null>(null);
-  const [loadingRemoteTfTargets, setLoadingRemoteTfTargets] = useState(false);
+  const resolvedTfTargets = useMemo(() => tfTargets ?? new Map<string, Set<string>>(), [tfTargets]);
 
   const availableTerms = useMemo(() => {
     return GO_TERMS.map((term) => ({
@@ -89,54 +86,6 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
     loadUniverse();
   }, []);
 
-  const tfTargets = useMemo(() => {
-    if (remoteTfTargets && remoteTfTargets.size > 0) {
-      return remoteTfTargets;
-    }
-    const map = new Map<string, Set<string>>();
-    data.forEach((i) => {
-      if (i.evidenceCount < evidenceThreshold) return;
-      if (!i.sources.some((s) => selectedSources.includes(s))) return;
-      const tf = i.tf;
-      const targetId = (i.targetId || i.target || '').toUpperCase();
-      if (!targetId) return;
-      const entry = map.get(tf) || new Set<string>();
-      entry.add(targetId);
-      map.set(tf, entry);
-    });
-    return map;
-  }, [data, evidenceThreshold, selectedSources, remoteTfTargets]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingRemoteTfTargets(true);
-
-    fetchSupabaseTfTargetSets({
-      minConfidence: evidenceThreshold,
-      selectedSources
-    })
-      .then((result) => {
-        if (!cancelled) {
-          setRemoteTfTargets(result);
-        }
-      })
-      .catch((error) => {
-        console.warn('Remote enrichment source unavailable, using local sample.', error);
-        if (!cancelled) {
-          setRemoteTfTargets(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingRemoteTfTargets(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [evidenceThreshold, selectedSources.join('|')]);
-
   const termGenes = useMemo(() => {
     const map = new Map<string, Set<string>>();
     availableTerms.forEach((term) => {
@@ -153,11 +102,11 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
     const terms = new Set([activeTerm, ...selectedTerms].filter(Boolean));
     terms.forEach((termId) => {
       const genes = termGenes.get(termId) || new Set<string>();
-      const enriched = computeEnrichment(tfTargets, genes, universe);
+      const enriched = computeEnrichment(resolvedTfTargets, genes, universe);
       map.set(termId, enriched);
     });
     return map;
-  }, [activeTerm, selectedTerms, termGenes, tfTargets, universe]);
+  }, [activeTerm, selectedTerms, termGenes, resolvedTfTargets, universe]);
 
   useEffect(() => {
     if (!activeTerm || !universe) {
@@ -185,7 +134,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
 
   const heatmapTerms = selectedTerms.filter((t) => byTermByTf.has(t));
   const heatmapRows = useMemo(() => {
-    const tfs = Array.from(tfTargets.keys());
+    const tfs = Array.from(resolvedTfTargets.keys());
     const scored = tfs.map((tf) => {
       let best = 1;
       heatmapTerms.forEach((term) => {
@@ -195,7 +144,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
       return { tf, best };
     });
     return scored.sort((a, b) => a.best - b.best).slice(0, 30).map((s) => s.tf);
-  }, [tfTargets, byTermByTf, heatmapTerms]);
+  }, [resolvedTfTargets, byTermByTf, heatmapTerms]);
 
   const heatmapRange = useMemo(() => {
     let min = 0;
@@ -238,6 +187,11 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="p-4 bg-red-900/20 text-red-400 text-sm font-bold rounded-2xl border border-red-800">
+          {error}
+        </div>
+      )}
       <div className="print-panel p-6 rounded-3xl">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -290,7 +244,7 @@ export default function EnrichmentPanel({ data, selectedSources, minConfidence, 
         <div className="mt-4 text-xs text-[var(--print-fog)] flex flex-wrap gap-4">
           <div>Universe: <span className="text-[var(--print-mint-soft)] font-bold">{loadingUniverse ? 'cargando...' : universeSize.toLocaleString()}</span></div>
           <div>GO genes: <span className="text-[#69d7cf] font-bold">{termGeneCount.toLocaleString()}</span></div>
-          <div>TFs evaluados: <span className="text-[#efc98e] font-bold">{loadingRemoteTfTargets ? 'cargando...' : tfTargets.size.toLocaleString()}</span></div>
+          <div>TFs evaluados: <span className="text-[#efc98e] font-bold">{loading ? 'cargando...' : resolvedTfTargets.size.toLocaleString()}</span></div>
           <div className="mt-2 text-[10px] text-[var(--print-fog)]">Fuente GO: TAIR (ATH_GO_GOSLIM.txt) obtenido el 03-02-2026.</div>
 </div>
 

@@ -200,13 +200,13 @@ export default function Landing({ onEnter }: LandingProps) {
               href="https://pgrlab.cl"
               target="_blank"
               rel="noreferrer"
-              className="rounded-2xl px-4 py-2 flex items-center justify-center overflow-hidden transition-all hover:border-[var(--print-line-strong)] hover:bg-white/5 border border-[rgba(119,167,159,0.22)] bg-[linear-gradient(180deg,rgba(48,72,80,0.9),rgba(31,47,54,0.9))]"
+              className="print-partner-card rounded-2xl px-4 py-2.5 flex items-center justify-center overflow-hidden transition-all hover:border-[var(--print-line-strong)] hover:bg-white/5"
             >
-              <div className="h-12 w-36 md:h-14 md:w-40 flex items-center justify-center shrink-0">
+              <div className="h-14 w-40 md:h-16 md:w-44 flex items-center justify-center shrink-0">
                 <img
                   src="/logos/Logo Lab (transparent bg).png"
                   alt="Plant Genome Regulation Lab"
-                  className="max-h-full max-w-full object-contain opacity-90"
+                  className="print-partner-logo max-h-full max-w-full object-contain opacity-100"
                 />
               </div>
             </a>

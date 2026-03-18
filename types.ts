@@ -30,6 +30,7 @@ export interface IntegratedInteraction {
 }
 
 export interface DatasetStats {
+  totalInteractions?: number;
   sourceCounts: {
     name: 'TARGET' | 'DAP' | 'CHIP';
     count: number;
@@ -64,12 +65,7 @@ export interface HubMapping {
   [geneId: string]: HubData;
 }
 
-export type AnalysisResult = {
-  summary: string;
-  insights: string[];
-};
-
-export type AppView = 'landing' | 'explorer' | 'network' | 'enrichment' | 'ai';
+export type AppView = 'landing' | 'explorer' | 'network' | 'enrichment';
 
 export type NetworkColorMode = 'source' | 'regulation' | 'pathway';
 export type NetworkLayoutMode = 'force' | 'hierarchical';
